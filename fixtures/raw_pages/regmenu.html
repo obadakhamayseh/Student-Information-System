@@ -1,0 +1,1347 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<link rel="stylesheet" type="text/css" href="css/style.css">
+<html oncontextmenu="return false" lang="ar" dir="rtl">
+
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التسجيل الإلكتروني - جامعة مؤتة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/studreg/css/style.css">
+    <style>
+        /* Toast Notification - Bottom Right Corner */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .toast {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-right: 4px solid #28a745;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideInRight 0.3s ease-out;
+            transition: all 0.3s ease;
+        }
+
+        .toast-success {
+            border-right-color: #28a745;
+        }
+
+        .toast-error {
+            border-right-color: #dc3545;
+        }
+
+        .toast-warning {
+            border-right-color: #ffc107;
+        }
+
+        .toast-info {
+            border-right-color: #17a2b8;
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .toast-success .toast-icon {
+            color: #28a745;
+        }
+
+        .toast-error .toast-icon {
+            color: #dc3545;
+        }
+
+        .toast-warning .toast-icon {
+            color: #ffc107;
+        }
+
+        .toast-info .toast-icon {
+            color: #17a2b8;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+            color: #333;
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            margin-top: -2px;
+            transition: color 0.2s;
+        }
+
+        .toast-close:hover {
+            color: #333;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        .toast.hiding {
+            animation: slideOutRight 0.3s ease-in forwards;
+        }
+
+        /* Form specific styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 0;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1a4d8c;
+            font-size: 0.95rem;
+        }
+        
+        .form-label i {
+            color: #1a4d8c;
+            margin-left: 8px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s ease;
+            background: white;
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #1a4d8c;
+            box-shadow: 0 0 0 3px rgba(26, 77, 140, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .form-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 6px;
+            display: block;
+        }
+        
+        .text-muted {
+            color: #6b7280;
+        }
+        
+        /* Button styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+        }
+        
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 0.85rem;
+        }
+        
+        .btn-lg {
+            padding: 14px 32px;
+            font-size: 1.05rem;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #1a4d8c;
+            color: #1a4d8c;
+        }
+        
+        .btn-outline:hover {
+            background: #1a4d8c;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-start;
+            margin-top: 25px;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background-color: #1a4d8c;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .action-btn:hover {
+            background-color: #0e3a6b;
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: white;
+        }
+        
+        @media print {
+            .quick-actions,
+            .action-buttons,
+            .btn-danger,
+            .btn-success,
+            .btn-outline {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container for Bottom Right Corner -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    
+
+
+<header class="header">
+    <div class="container">
+        <div class="logo">
+            <img src="/studreg/mu.gif" alt="جامعة مؤتة" class="logo-img">
+            <div class="logo-text">
+                <h1>جامعة مؤتة</h1>
+                <p>نظام معلومات الطلبة</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="notification-bell" id="notificationBell">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-header">
+                        <h4><i class="fas fa-bell"></i> الإشعارات</h4>
+                        <button onclick="markAllNotificationsRead()" class="mark-read-btn">تحديد الكل كمقروء</button>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <div class="no-notifications">
+                            <i class="fas fa-inbox"></i>
+                            <p>لا توجد إشعارات جديدة</p>
+                        </div>
+                    </div>
+                    <div class="notification-footer">
+                        <a href="/studreg/chat.jsp">عرض جميع المحادثات</a>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-outline" onclick="window.open('/studreg/help.jsp', '_blank')">
+                <i class="fas fa-question-circle"></i> مساعدة
+            </button>
+            <button class="btn btn-primary" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+            </button>
+        </div>
+    </div>
+</header>
+
+<style>
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.notification-bell {
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-bell i {
+    font-size: 1.25rem;
+    color: var(--gray-dark);
+    transition: color var(--transition-base);
+}
+
+.notification-bell:hover i {
+    color: var(--primary);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--danger);
+    color: white;
+    border-radius: var(--radius-full);
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    width: 350px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    display: none;
+    z-index: 1000;
+    border: 1px solid var(--border-light);
+}
+
+.notification-dropdown.show {
+    display: block;
+}
+
+.notification-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-header h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.mark-read-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.mark-read-btn:hover {
+    background: var(--light);
+}
+
+.notification-list {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background var(--transition-base);
+}
+
+.notification-item:hover {
+    background: var(--light);
+}
+
+.notification-item.unread {
+    background: var(--info-light);
+    border-right: 3px solid var(--info);
+}
+
+.notification-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.notification-message {
+    font-size: 0.7rem;
+    color: var(--gray);
+    margin-bottom: 0.25rem;
+}
+
+.notification-time {
+    font-size: 0.65rem;
+    color: var(--gray-light);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.no-notifications {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+}
+
+.no-notifications i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.notification-footer {
+    padding: 0.75rem;
+    text-align: center;
+    border-top: 1px solid var(--border-light);
+}
+
+.notification-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@media (max-width: 768px) {
+    .header .container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .notification-dropdown {
+        left: 0;
+        right: auto;
+        width: 300px;
+    }
+}
+</style>
+
+<script>
+var contextPath = '/studreg';
+var csrfToken = 'uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY';
+
+function updateUnreadCountFromServer() {
+    fetch(contextPath + '/ChatServlet?action=getUnreadCount')
+        .then(response => response.json())
+        .then(data => {
+            var badge = document.getElementById('notificationBadge');
+            if (data.unreadCount > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+            } else {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(error => console.log('Chat system not ready'));
+}
+
+function loadNotifications() {
+    fetch(contextPath + '/ChatServlet?action=getConversations')
+        .then(response => response.json())
+        .then(data => {
+            var notificationList = document.getElementById('notificationList');
+            var unreadConversations = data.filter(conv => conv.unreadCount > 0);
+            
+            if (unreadConversations.length === 0) {
+                notificationList.innerHTML = '<div class="no-notifications"><i class="fas fa-inbox"></i><p>لا توجد إشعارات جديدة</p></div>';
+                return;
+            }
+            
+            notificationList.innerHTML = '';
+            var limit = Math.min(unreadConversations.length, 10);
+            for (var i = 0; i < limit; i++) {
+                var conv = unreadConversations[i];
+                var div = document.createElement('div');
+                div.className = 'notification-item unread';
+                div.onclick = (function(id) {
+                    return function() { window.location.href = contextPath + '/chat.jsp?conversationId=' + id; };
+                })(conv.conversationId);
+                div.innerHTML = '<div class="notification-title"><i class="fas fa-comment"></i> ' + escapeHtml(conv.roomName) + '</div>' +
+                    '<div class="notification-message">' + escapeHtml(conv.subject.substring(0, 80)) + (conv.subject.length > 80 ? '...' : '') + '</div>' +
+                    '<div class="notification-time"><i class="fas fa-envelope"></i> ' + conv.unreadCount + ' رسالة غير مقروءة</div>';
+                notificationList.appendChild(div);
+            }
+        })
+        .catch(error => console.log('Chat system not ready'));
+}
+
+function markAllNotificationsRead() {
+    if (!csrfToken) return;
+    
+    var formData = new URLSearchParams();
+    formData.append('action', 'markAllAsRead');
+    formData.append('csrf_token', csrfToken);
+    
+    fetch(contextPath + '/ChatServlet', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateUnreadCountFromServer();
+            document.getElementById('notificationDropdown').classList.remove('show');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function logout() {
+    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+        window.location.href = contextPath + '/logout.jsp';
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+var bell = document.getElementById('notificationBell');
+var dropdown = document.getElementById('notificationDropdown');
+
+if (bell) {
+    bell.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+        if (dropdown.classList.contains('show')) {
+            loadNotifications();
+        }
+    });
+}
+
+document.addEventListener('click', function(e) {
+    if (dropdown && !bell.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateUnreadCountFromServer();
+});
+
+setInterval(updateUnreadCountFromServer, 30000);
+</script>
+    
+    <main class="main-content">
+        <div class="container">
+            <div class="dashboard">
+                
+
+
+
+
+
+<style>
+/* Sidebar Styles - Inline */
+.sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f2b44 100%);
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    height: fit-content;
+    position: sticky;
+    top: 94px;
+    overflow: hidden;
+}
+
+.user-profile {
+    text-align: center;
+    padding: 30px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-avatar {
+    width: 90px;
+    height: 90px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    color: white;
+    font-size: 2.5rem;
+    border: 3px solid rgba(255,255,255,0.3);
+}
+
+.user-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.user-id {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 12px;
+    border-radius: 9999px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li {
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    transition: all 0.3s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-right: 3px solid transparent;
+    position: relative;
+}
+
+.sidebar-menu a:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border-right-color: #f59e0b;
+}
+
+.sidebar-menu a.active {
+    background: rgba(102, 126, 234, 0.3);
+    color: white;
+    border-right-color: #667eea;
+}
+
+.sidebar-menu i {
+    width: 24px;
+    text-align: center;
+    font-size: 1.125rem;
+}
+
+.sidebar-menu .logout-item {
+    margin-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 10px;
+}
+
+.sidebar-menu .logout-item a {
+    color: #f87171;
+}
+
+.sidebar-menu .logout-item a:hover {
+    background: rgba(220, 38, 38, 0.2);
+    color: white;
+}
+
+.chat-menu-item {
+    position: relative;
+}
+
+.chat-badge {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ef4444;
+    color: white;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 20px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+/* ===== NEW BADGE STYLES ===== */
+.new-badge {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: white;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    min-width: 30px;
+    text-align: center;
+    animation: newPulse 2s infinite;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    text-transform: uppercase;
+}
+
+.new-badge::before {
+    content: "✨ ";
+}
+
+@keyframes newPulse {
+    0%, 100% { 
+        transform: translateY(-50%) scale(1);
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+    50% { 
+        transform: translateY(-50%) scale(1.05);
+        box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.1); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        min-width: auto;
+        position: relative;
+        top: 0;
+        margin-bottom: 20px;
+    }
+}
+</style>
+
+<aside class="sidebar">
+    <div class="user-profile">
+        <div class="user-avatar">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <div class="user-name">عباده سالم موسى الخمايسه</div>
+        <div class="user-id">
+            <i class="fas fa-id-card"></i>
+            <span>120242222083</span>
+        </div>
+    </div>
+    
+    <ul class="sidebar-menu">
+        
+        <li><a href="/studreg/dashboard.jsp" class=""><i class="fas fa-home"></i> الرئيسية</a></li>
+        <li><a href="/studreg/scholarfees.jsp" class=""><i class="fas fa-graduation-cap"></i> الرسوم الجامعية</a></li>
+        <li><a href="/studreg/Logreg?p_stud_num=120242222083&page_name=1" class="active"><i class="fas fa-user-edit"></i> التسجيل</a></li>
+        <li><a href="/studreg/Isvalid" class=""><i class="fas fa-calendar-alt"></i> المواد البديلة</a></li>
+        <li><a href="/studreg/trans.jsp?stud_num=120242222083&stud_name=%D8%B9%D8%A8%D8%A7%D8%AF%D9%87+%D8%B3%D8%A7%D9%84%D9%85+%D9%85%D9%88%D8%B3%D9%89+%D8%A7%D9%84%D8%AE%D9%85%D8%A7%D9%8A%D8%B3%D9%87&stud_college=%D8%AA%D9%83%D9%86%D9%88%D9%84%D9%88%D8%AC%D9%8A%D8%A7+%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA" class=""><i class="fas fa-exchange-alt"></i> تحويل التخصص</a></li>
+        
+        <!-- ===== ITEM WITH NEW BADGE ===== -->
+        <li>
+            <a href="/studreg/deferred.jsp" class="">
+                <i class="fas fa-book"></i> طلبات التأجيل
+                <span class="new-badge">جديد</span>
+            </a>
+        </li>
+        
+        <li><a href="/studreg/IsvalidSync" class=""><i class="fas fa-sync-alt"></i> طلب التزامن</a></li>
+        <li><a href="/studreg/outplan1111.jsp" class=""><i class="fas fa-external-link-alt"></i> مادة من خارج الخطة</a></li>
+        <li><a href="/studreg/Logreg?p_stud_num=120242222083&page_name=2" class=""><i class="fas fa-expand-arrows-alt"></i> توسعة شعبة</a></li>
+        <li><a href="/studreg/withdraw.jsp" class=""><i class="fas fa-minus-circle"></i> الانسحاب</a></li>
+        <li><a href="/studreg/examschedule.jsp" class=""><i class="fas fa-calendar-alt"></i> برنامج الامتحانات</a></li>
+        
+        <li><a href="/studreg/changepass.jsp" class=""><i class="fas fa-key"></i> تغيير كلمة السر</a></li>
+        <li class="chat-menu-item">
+            <a href="/studreg/chat.jsp" class="" id="chatMenuLink">
+                <i class="fas fa-comments"></i> المحادثات
+                
+                <span class="chat-badge" id="sidebarChatBadge" style="display: none;">0</span>
+                
+            </a>
+        </li>
+        <li class="logout-item"><a href="#" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+    </ul>
+</aside>
+
+<script>
+var sidebarContextPath = '/studreg';
+var lastAjaxUpdate = 0;
+var AJAX_INTERVAL = 30000;
+
+function updateSidebarUnreadCount() {
+    var now = new Date().getTime();
+    if (now - lastAjaxUpdate < AJAX_INTERVAL) return;
+    lastAjaxUpdate = now;
+    
+    fetch(sidebarContextPath + '/ChatServlet?action=getUnreadCount')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var badge = document.getElementById('sidebarChatBadge');
+            if (badge) {
+                if (data.unreadCount > 0) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(function(error) { console.log('Chat system not ready'); });
+}
+
+function logout() {
+    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+        window.location.href = '/studreg/logout.jsp';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateSidebarUnreadCount();
+});
+</script>
+                
+                <div class="content">
+                    <div class="page-header">
+                        <h2 class="page-title">
+                            <i class="fas fa-user-edit"></i>
+                            التسجيل الإلكتروني
+                        </h2>
+                        <div class="student-info-badge">
+                            <span class="info-item">
+                                <i class="fas fa-user"></i> عباده سالم موسى الخمايسه
+                            </span>
+                            <span class="info-item">
+                                <i class="fas fa-university"></i> تكنولوجيا المعلومات
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle fa-lg"></i>
+                        <div>اهلاً وسهلاً بك في صفحة التسجيل الإلكتروني. يرجى اختيار المواد بعناية.</div>
+                    </div>
+                    
+                    <!-- المواد الاستدراكية -->
+                    
+                    
+                    <!-- المواد المتزامنة -->
+                    
+                    
+                    <!-- المواد المسجلة حالياً -->
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="fas fa-calendar-check" style="color: #28a745;"></i>
+                            المواد المسجلة حالياً
+                        </h3>
+                        
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th><th>رقم المادة</th><th>اسم المادة</th>
+                                        <th>الشعبة</th><th>القاعة</th><th>الوقت</th><th>الأيام</th><th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                    <tr>
+                                        <td style="text-align: center;"><span class="serial-badge">1</span></td>
+                                        <td><span class="course-code">2212351</span></td>
+                                        <td style="text-align: right; font-weight: 500;">أمن الحاسبات والشبكات</td>
+                                        <td><span class="section-badge">2</span></td>
+                                        <td><span class="hall-badge">IT Smart20</span></td>
+                                        <td><span class="time-badge">10-11.3</span></td>
+                                        <td>
+                                            
+                                            <span class="day-badge">ن،ر</span>
+                                            
+                                        </td>
+                                        <td>
+                                            <form action="regist" method="POST" style="display: inline;" onsubmit="return handleWithdrawSubmit(event, 'أمن الحاسبات والشبكات')">
+                                                <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                                                <input type="hidden" name="psub_number" value="2212351">
+                                                <input type="hidden" name="psection" value="2">
+                                                <input type="hidden" name="PCHOICE" value="2">
+                                                <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-minus-circle"></i> سحب
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td style="text-align: center;"><span class="serial-badge">2</span></td>
+                                        <td><span class="course-code">2222232</span></td>
+                                        <td style="text-align: right; font-weight: 500;">نمذجة البيانات ومحاكاتها</td>
+                                        <td><span class="section-badge">1</span></td>
+                                        <td><span class="hall-badge">IT_Lab 04</span></td>
+                                        <td><span class="time-badge">8.3-10</span></td>
+                                        <td>
+                                            
+                                            <span class="day-badge">ن،ر</span>
+                                            
+                                        </td>
+                                        <td>
+                                            <form action="regist" method="POST" style="display: inline;" onsubmit="return handleWithdrawSubmit(event, 'نمذجة البيانات ومحاكاتها')">
+                                                <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                                                <input type="hidden" name="psub_number" value="2222232">
+                                                <input type="hidden" name="psection" value="1">
+                                                <input type="hidden" name="PCHOICE" value="2">
+                                                <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-minus-circle"></i> سحب
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td style="text-align: center;"><span class="serial-badge">3</span></td>
+                                        <td><span class="course-code">2222364</span></td>
+                                        <td style="text-align: right; font-weight: 500;">التعلم الالي والعميق</td>
+                                        <td><span class="section-badge">1</span></td>
+                                        <td><span class="hall-badge">IT_smart3</span></td>
+                                        <td><span class="time-badge">9.3-10.3</span></td>
+                                        <td>
+                                            
+                                            <span class="day-badge">أ،ث،خ</span>
+                                            
+                                        </td>
+                                        <td>
+                                            <form action="regist" method="POST" style="display: inline;" onsubmit="return handleWithdrawSubmit(event, 'التعلم الالي والعميق')">
+                                                <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                                                <input type="hidden" name="psub_number" value="2222364">
+                                                <input type="hidden" name="psection" value="1">
+                                                <input type="hidden" name="PCHOICE" value="2">
+                                                <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-minus-circle"></i> سحب
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td style="text-align: center;"><span class="serial-badge">4</span></td>
+                                        <td><span class="course-code">2222365</span></td>
+                                        <td style="text-align: right; font-weight: 500;">الحوسبة عالية الأداء والبيانات الضخمة</td>
+                                        <td><span class="section-badge">1</span></td>
+                                        <td><span class="hall-badge">IT Smart10</span></td>
+                                        <td><span class="time-badge">11.3-1</span></td>
+                                        <td>
+                                            
+                                            <span class="day-badge">ن،ر</span>
+                                            
+                                        </td>
+                                        <td>
+                                            <form action="regist" method="POST" style="display: inline;" onsubmit="return handleWithdrawSubmit(event, 'الحوسبة عالية الأداء والبيانات الضخمة')">
+                                                <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                                                <input type="hidden" name="psub_number" value="2222365">
+                                                <input type="hidden" name="psection" value="1">
+                                                <input type="hidden" name="PCHOICE" value="2">
+                                                <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-minus-circle"></i> سحب
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td style="text-align: center;"><span class="serial-badge">5</span></td>
+                                        <td><span class="course-code">2222441</span></td>
+                                        <td style="text-align: right; font-weight: 500;">التنقيب عن البيانات</td>
+                                        <td><span class="section-badge">1</span></td>
+                                        <td><span class="hall-badge">IT_smart3</span></td>
+                                        <td><span class="time-badge">1-2.3</span></td>
+                                        <td>
+                                            
+                                            <span class="day-badge">ن،ر</span>
+                                            
+                                        </td>
+                                        <td>
+                                            <form action="regist" method="POST" style="display: inline;" onsubmit="return handleWithdrawSubmit(event, 'التنقيب عن البيانات')">
+                                                <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                                                <input type="hidden" name="psub_number" value="2222441">
+                                                <input type="hidden" name="psection" value="1">
+                                                <input type="hidden" name="PCHOICE" value="2">
+                                                <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-minus-circle"></i> سحب
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td style="text-align: center;"><span class="serial-badge">6</span></td>
+                                        <td><span class="course-code">2222491</span></td>
+                                        <td style="text-align: right; font-weight: 500;">مشروع تخرج1</td>
+                                        <td><span class="section-badge">1</span></td>
+                                        <td><span class="hall-badge">*** **</span></td>
+                                        <td><span class="time-badge">-</span></td>
+                                        <td>
+                                            
+                                            <span class="day-badge">-</span>
+                                            
+                                        </td>
+                                        <td>
+                                            <form action="regist" method="POST" style="display: inline;" onsubmit="return handleWithdrawSubmit(event, 'مشروع تخرج1')">
+                                                <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                                                <input type="hidden" name="psub_number" value="2222491">
+                                                <input type="hidden" name="psection" value="1">
+                                                <input type="hidden" name="PCHOICE" value="2">
+                                                <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-minus-circle"></i> سحب
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- إضافة مادة جديدة - النموذج المحسن -->
+                    <div class="section-card">
+                        <h3 class="section-title">
+                            <i class="fas fa-plus-circle" style="color: #28a745;"></i>
+                            إضافة مادة جديدة
+                        </h3>
+                        <form action="regist" method="POST" onsubmit="return handleAddSubmit(event)">
+                            <input type="hidden" name="csrf_token" value="uc50yzUgDr1l0Kh9d39c3qK2ZnATy1CY">
+                            <input type="hidden" name="PCHOICE" value="1">
+                            <input type="hidden" name="redirect_page" value="regmenu.jsp">
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="psub_number">
+                                        <i class="fas fa-hashtag"></i> رقم المادة
+                                    </label>
+                                    <input type="text" id="psub_number" name="psub_number" 
+                                           maxlength="7" class="form-control" required
+                                           placeholder="أدخل 7 أرقام" 
+                                           pattern="[0-9]{7}" 
+                                           title="رقم المادة يجب أن يكون 7 أرقام">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> مثال: 0501101
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="psection">
+                                        <i class="fas fa-layer-group"></i> رقم الشعبة
+                                    </label>
+                                    <input type="text" id="psection" name="psection" 
+                                           maxlength="2" class="form-control" required
+                                           placeholder="أدخل 1-2 أرقام" 
+                                           pattern="[0-9]{1,2}" 
+                                           title="رقم الشعبة يجب أن يكون 1-2 أرقام">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> مثال: 1, 2, 10
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-plus-circle"></i> إضافة مادة
+                                </button>
+                                <button type="reset" class="btn btn-outline btn-lg">
+                                    <i class="fas fa-undo"></i> مسح
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- روابط سريعة -->
+                    <div class="quick-actions">
+                        <a href="dashboard.jsp" class="action-btn">
+                            <i class="fas fa-chalkboard-user"></i> لوحة المعلومات
+                        </a>
+                        <a href="changepass.jsp" class="action-btn">
+                            <i class="fas fa-key"></i> تغيير كلمة السر
+                        </a>
+                        <button class="action-btn" onclick="printSchedule()">
+                            <i class="fas fa-print"></i> طباعة الجدول
+                        </button>
+                        <button class="action-btn" style="background-color: #dc3545;" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    
+
+<footer>
+    <div class="container">
+        <div class="footer-content">
+            <p>جميع الحقوق محفوظة &copy; 2026 - جامعة مؤتة</p>
+        </div>
+    </div>
+</footer>
+    
+    <script>
+        // Toast notification system
+        function showToast(message, type, title) {
+            var container = document.getElementById('toastContainer');
+            
+            // Set defaults if not provided
+            type = type || 'info';
+            title = title || '';
+            
+            // Define icons based on type
+            var icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            // Define titles based on type if not provided
+            var defaultTitles = {
+                success: 'تم بنجاح',
+                error: 'خطأ',
+                warning: 'تنبيه',
+                info: 'معلومات'
+            };
+            
+            var toastTitle = title || defaultTitles[type] || 'تنبيه';
+            var iconClass = icons[type] || icons.info;
+            
+            // Create toast element
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            toast.innerHTML = '<div class="toast-icon"><i class="fas ' + iconClass + '"></i></div>' +
+                              '<div class="toast-content"><div class="toast-title">' + toastTitle + '</div>' +
+                              '<div class="toast-message">' + message + '</div></div>' +
+                              '<button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+            
+            // Add to container
+            container.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(function() {
+                if (toast.parentElement) {
+                    toast.classList.add('hiding');
+                    setTimeout(function() {
+                        if (toast.parentElement) {
+                            toast.remove();
+                        }
+                    }, 300);
+                }
+            }, 10000);
+        }
+        
+        // Handle server-side messages (shown as toast)
+        window.addEventListener('DOMContentLoaded', function() {
+            
+        });
+        
+        function validateForm() {
+            var subNumber = document.getElementById('psub_number');
+            var section = document.getElementById('psection');
+            
+            if (subNumber && !/^\d{7}$/.test(subNumber.value)) {
+                showToast('رقم المادة يجب أن يكون 7 أرقام', 'error', 'خطأ في الإدخال');
+                subNumber.focus();
+                return false;
+            }
+            
+            if (section && !/^\d{1,2}$/.test(section.value)) {
+                showToast('رقم الشعبة يجب أن يكون رقماً مكوناً من 1-2 أرقام', 'error', 'خطأ في الإدخال');
+                section.focus();
+                return false;
+            }
+            
+            return true;
+        }
+        
+        function handleAddSubmit(event) {
+            if (!validateForm()) {
+                event.preventDefault();
+                return false;
+            }
+            
+            var subNumber = document.getElementById('psub_number').value;
+            if (!confirm('هل أنت متأكد من إضافة المادة ' + subNumber + '؟')) {
+                event.preventDefault();
+                return false;
+            }
+            
+            showToast('جاري إضافة المادة ' + subNumber + '...', 'info', 'يرجى الانتظار');
+            return true;
+        }
+        
+        function handleWithdrawSubmit(event, courseName) {
+            if (!confirm('هل أنت متأكد من سحب مادة ' + courseName + '؟')) {
+                event.preventDefault();
+                return false;
+            }
+            
+            showToast('جاري سحب المادة ' + courseName + '...', 'info', 'يرجى الانتظار');
+            return true;
+        }
+        
+        function logout() {
+            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                window.location.href = '/studreg/logout.jsp';
+            }
+        }
+        
+        function printSchedule() {
+            window.print();
+        }
+        
+        // منع استخدام زر الرجوع بعد تسجيل الخروج
+        if (window.history && window.history.pushState) {
+            history.pushState(null, null, location.href);
+            window.onpopstate = function() {
+                history.go(1);
+            };
+        }
+    </script>
+    
+    
+</body>
+</html>

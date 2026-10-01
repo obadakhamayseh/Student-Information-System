@@ -1,0 +1,1360 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<link rel="stylesheet" type="text/css" href="css/style.css">
+<html oncontextmenu="return false" lang="ar" dir="rtl">
+
+
+
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الامتحانات - جامعة مؤتة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/studreg/style.css">
+    
+    <style>
+        .exam-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+        
+        .exam-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .exam-header i {
+            font-size: 1.5rem;
+        }
+        
+        .exam-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .exam-header .exam-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-right: auto;
+        }
+        
+        .exam-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .exam-table th {
+            background: #f8f9fc;
+            padding: 14px 12px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 2px solid var(--light-gray);
+            font-size: 0.9rem;
+        }
+        
+        .exam-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        
+        .exam-table tr:hover {
+            background: #f9fafb;
+        }
+        
+        .exam-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .exam-type-final {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        
+        .exam-type-mid {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .exam-type-quiz {
+            background: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+        
+        .exam-type-other {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+            border: 1px solid rgba(108, 117, 125, 0.2);
+        }
+        
+        .hall-info {
+            background: #f0f7ff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: inline-block;
+            font-size: 0.85rem;
+        }
+        
+        .hall-info i {
+            margin-left: 5px;
+            color: var(--secondary);
+        }
+        
+        .time-info {
+            font-family: monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+        
+        .day-info {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .day-info i {
+            color: var(--secondary);
+        }
+        
+        .section-badge {
+            background: #e9ecef;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .empty-exam-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            color: var(--light-gray);
+            margin-bottom: 20px;
+        }
+        
+        .print-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .filter-label {
+            font-weight: 500;
+            color: var(--gray);
+        }
+        
+        .filter-select {
+            padding: 8px 15px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .summary-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(26, 79, 139, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        
+        .stat-info h4 {
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+        
+        .stat-info .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        .hall-btn {
+            background: linear-gradient(135deg, #1a4f8b 0%, #2d6a9f 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .hall-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 79, 139, 0.3);
+        }
+        
+        .hall-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        .hall-modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            animation: slideDown 0.3s;
+            direction: rtl;
+        }
+        
+        .hall-modal-header {
+            background: linear-gradient(135deg, #1a4f8b 0%, #2d6a9f 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .hall-modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        
+        .hall-modal-close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .hall-modal-close:hover {
+            color: #ddd;
+        }
+        
+        .hall-modal-body {
+            padding: 20px;
+        }
+        
+        .hall-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .hall-list li {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .hall-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .hall-list li i {
+            color: var(--secondary);
+            width: 25px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @media print {
+            .sidebar, .header, .quick-actions, .filter-section, .print-btn, .no-print, .hall-btn {
+                display: none !important;
+            }
+            .main-content {
+                margin: 0;
+                padding: 0;
+            }
+            .content {
+                margin: 0;
+                padding: 0;
+            }
+            .exam-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            body {
+                background: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+
+
+<header class="header">
+    <div class="container">
+        <div class="logo">
+            <img src="/studreg/mu.gif" alt="جامعة مؤتة" class="logo-img">
+            <div class="logo-text">
+                <h1>جامعة مؤتة</h1>
+                <p>نظام معلومات الطلبة</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="notification-bell" id="notificationBell">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-header">
+                        <h4><i class="fas fa-bell"></i> الإشعارات</h4>
+                        <button onclick="markAllNotificationsRead()" class="mark-read-btn">تحديد الكل كمقروء</button>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <div class="no-notifications">
+                            <i class="fas fa-inbox"></i>
+                            <p>لا توجد إشعارات جديدة</p>
+                        </div>
+                    </div>
+                    <div class="notification-footer">
+                        <a href="/studreg/chat.jsp">عرض جميع المحادثات</a>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-outline" onclick="window.open('/studreg/help.jsp', '_blank')">
+                <i class="fas fa-question-circle"></i> مساعدة
+            </button>
+            <button class="btn btn-primary" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+            </button>
+        </div>
+    </div>
+</header>
+
+<style>
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.notification-bell {
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-bell i {
+    font-size: 1.25rem;
+    color: var(--gray-dark);
+    transition: color var(--transition-base);
+}
+
+.notification-bell:hover i {
+    color: var(--primary);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--danger);
+    color: white;
+    border-radius: var(--radius-full);
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    width: 350px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    display: none;
+    z-index: 1000;
+    border: 1px solid var(--border-light);
+}
+
+.notification-dropdown.show {
+    display: block;
+}
+
+.notification-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-header h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.mark-read-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.mark-read-btn:hover {
+    background: var(--light);
+}
+
+.notification-list {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background var(--transition-base);
+}
+
+.notification-item:hover {
+    background: var(--light);
+}
+
+.notification-item.unread {
+    background: var(--info-light);
+    border-right: 3px solid var(--info);
+}
+
+.notification-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.notification-message {
+    font-size: 0.7rem;
+    color: var(--gray);
+    margin-bottom: 0.25rem;
+}
+
+.notification-time {
+    font-size: 0.65rem;
+    color: var(--gray-light);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.no-notifications {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+}
+
+.no-notifications i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.notification-footer {
+    padding: 0.75rem;
+    text-align: center;
+    border-top: 1px solid var(--border-light);
+}
+
+.notification-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@media (max-width: 768px) {
+    .header .container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .notification-dropdown {
+        left: 0;
+        right: auto;
+        width: 300px;
+    }
+}
+</style>
+
+<script>
+var contextPath = '/studreg';
+var csrfToken = 'BPaoLKaWGybhe9x7VR9dl5eJhzKLPVwB';
+
+function updateUnreadCountFromServer() {
+    fetch(contextPath + '/ChatServlet?action=getUnreadCount')
+        .then(response => response.json())
+        .then(data => {
+            var badge = document.getElementById('notificationBadge');
+            if (data.unreadCount > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+            } else {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(error => console.log('Chat system not ready'));
+}
+
+function loadNotifications() {
+    fetch(contextPath + '/ChatServlet?action=getConversations')
+        .then(response => response.json())
+        .then(data => {
+            var notificationList = document.getElementById('notificationList');
+            var unreadConversations = data.filter(conv => conv.unreadCount > 0);
+            
+            if (unreadConversations.length === 0) {
+                notificationList.innerHTML = '<div class="no-notifications"><i class="fas fa-inbox"></i><p>لا توجد إشعارات جديدة</p></div>';
+                return;
+            }
+            
+            notificationList.innerHTML = '';
+            var limit = Math.min(unreadConversations.length, 10);
+            for (var i = 0; i < limit; i++) {
+                var conv = unreadConversations[i];
+                var div = document.createElement('div');
+                div.className = 'notification-item unread';
+                div.onclick = (function(id) {
+                    return function() { window.location.href = contextPath + '/chat.jsp?conversationId=' + id; };
+                })(conv.conversationId);
+                div.innerHTML = '<div class="notification-title"><i class="fas fa-comment"></i> ' + escapeHtml(conv.roomName) + '</div>' +
+                    '<div class="notification-message">' + escapeHtml(conv.subject.substring(0, 80)) + (conv.subject.length > 80 ? '...' : '') + '</div>' +
+                    '<div class="notification-time"><i class="fas fa-envelope"></i> ' + conv.unreadCount + ' رسالة غير مقروءة</div>';
+                notificationList.appendChild(div);
+            }
+        })
+        .catch(error => console.log('Chat system not ready'));
+}
+
+function markAllNotificationsRead() {
+    if (!csrfToken) return;
+    
+    var formData = new URLSearchParams();
+    formData.append('action', 'markAllAsRead');
+    formData.append('csrf_token', csrfToken);
+    
+    fetch(contextPath + '/ChatServlet', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateUnreadCountFromServer();
+            document.getElementById('notificationDropdown').classList.remove('show');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function logout() {
+    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+        window.location.href = contextPath + '/logout.jsp';
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+var bell = document.getElementById('notificationBell');
+var dropdown = document.getElementById('notificationDropdown');
+
+if (bell) {
+    bell.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+        if (dropdown.classList.contains('show')) {
+            loadNotifications();
+        }
+    });
+}
+
+document.addEventListener('click', function(e) {
+    if (dropdown && !bell.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateUnreadCountFromServer();
+});
+
+setInterval(updateUnreadCountFromServer, 30000);
+</script>
+    
+    <main class="main-content">
+        <div class="container">
+            <div class="dashboard">
+                
+
+
+
+
+
+<style>
+/* Sidebar Styles - Inline */
+.sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f2b44 100%);
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    height: fit-content;
+    position: sticky;
+    top: 94px;
+    overflow: hidden;
+}
+
+.user-profile {
+    text-align: center;
+    padding: 30px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-avatar {
+    width: 90px;
+    height: 90px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    color: white;
+    font-size: 2.5rem;
+    border: 3px solid rgba(255,255,255,0.3);
+}
+
+.user-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.user-id {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 12px;
+    border-radius: 9999px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li {
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    transition: all 0.3s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-right: 3px solid transparent;
+    position: relative;
+}
+
+.sidebar-menu a:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border-right-color: #f59e0b;
+}
+
+.sidebar-menu a.active {
+    background: rgba(102, 126, 234, 0.3);
+    color: white;
+    border-right-color: #667eea;
+}
+
+.sidebar-menu i {
+    width: 24px;
+    text-align: center;
+    font-size: 1.125rem;
+}
+
+.sidebar-menu .logout-item {
+    margin-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 10px;
+}
+
+.sidebar-menu .logout-item a {
+    color: #f87171;
+}
+
+.sidebar-menu .logout-item a:hover {
+    background: rgba(220, 38, 38, 0.2);
+    color: white;
+}
+
+.chat-menu-item {
+    position: relative;
+}
+
+.chat-badge {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ef4444;
+    color: white;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 20px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+/* ===== NEW BADGE STYLES ===== */
+.new-badge {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: white;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    min-width: 30px;
+    text-align: center;
+    animation: newPulse 2s infinite;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    text-transform: uppercase;
+}
+
+.new-badge::before {
+    content: "✨ ";
+}
+
+@keyframes newPulse {
+    0%, 100% { 
+        transform: translateY(-50%) scale(1);
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+    50% { 
+        transform: translateY(-50%) scale(1.05);
+        box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.1); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        min-width: auto;
+        position: relative;
+        top: 0;
+        margin-bottom: 20px;
+    }
+}
+</style>
+
+<aside class="sidebar">
+    <div class="user-profile">
+        <div class="user-avatar">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <div class="user-name">عباده سالم موسى الخمايسه</div>
+        <div class="user-id">
+            <i class="fas fa-id-card"></i>
+            <span>120242222083</span>
+        </div>
+    </div>
+    
+    <ul class="sidebar-menu">
+        
+        <li><a href="/studreg/dashboard.jsp" class=""><i class="fas fa-home"></i> الرئيسية</a></li>
+        <li><a href="/studreg/scholarfees.jsp" class=""><i class="fas fa-graduation-cap"></i> الرسوم الجامعية</a></li>
+        <li><a href="/studreg/Logreg?p_stud_num=120242222083&page_name=1" class=""><i class="fas fa-user-edit"></i> التسجيل</a></li>
+        <li><a href="/studreg/Isvalid" class=""><i class="fas fa-calendar-alt"></i> المواد البديلة</a></li>
+        <li><a href="/studreg/trans.jsp?stud_num=120242222083&stud_name=%D8%B9%D8%A8%D8%A7%D8%AF%D9%87+%D8%B3%D8%A7%D9%84%D9%85+%D9%85%D9%88%D8%B3%D9%89+%D8%A7%D9%84%D8%AE%D9%85%D8%A7%D9%8A%D8%B3%D9%87&stud_college=%D8%AA%D9%83%D9%86%D9%88%D9%84%D9%88%D8%AC%D9%8A%D8%A7+%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA" class=""><i class="fas fa-exchange-alt"></i> تحويل التخصص</a></li>
+        
+        <!-- ===== ITEM WITH NEW BADGE ===== -->
+        <li>
+            <a href="/studreg/deferred.jsp" class="">
+                <i class="fas fa-book"></i> طلبات التأجيل
+                <span class="new-badge">جديد</span>
+            </a>
+        </li>
+        
+        <li><a href="/studreg/IsvalidSync" class=""><i class="fas fa-sync-alt"></i> طلب التزامن</a></li>
+        <li><a href="/studreg/outplan1111.jsp" class=""><i class="fas fa-external-link-alt"></i> مادة من خارج الخطة</a></li>
+        <li><a href="/studreg/Logreg?p_stud_num=120242222083&page_name=2" class=""><i class="fas fa-expand-arrows-alt"></i> توسعة شعبة</a></li>
+        <li><a href="/studreg/withdraw.jsp" class=""><i class="fas fa-minus-circle"></i> الانسحاب</a></li>
+        <li><a href="/studreg/examschedule.jsp" class="active"><i class="fas fa-calendar-alt"></i> برنامج الامتحانات</a></li>
+        
+        <li><a href="/studreg/changepass.jsp" class=""><i class="fas fa-key"></i> تغيير كلمة السر</a></li>
+        <li class="chat-menu-item">
+            <a href="/studreg/chat.jsp" class="" id="chatMenuLink">
+                <i class="fas fa-comments"></i> المحادثات
+                
+                <span class="chat-badge" id="sidebarChatBadge" style="display: none;">0</span>
+                
+            </a>
+        </li>
+        <li class="logout-item"><a href="#" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+    </ul>
+</aside>
+
+<script>
+var sidebarContextPath = '/studreg';
+var lastAjaxUpdate = 0;
+var AJAX_INTERVAL = 30000;
+
+function updateSidebarUnreadCount() {
+    var now = new Date().getTime();
+    if (now - lastAjaxUpdate < AJAX_INTERVAL) return;
+    lastAjaxUpdate = now;
+    
+    fetch(sidebarContextPath + '/ChatServlet?action=getUnreadCount')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var badge = document.getElementById('sidebarChatBadge');
+            if (badge) {
+                if (data.unreadCount > 0) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(function(error) { console.log('Chat system not ready'); });
+}
+
+function logout() {
+    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+        window.location.href = '/studreg/logout.jsp';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateSidebarUnreadCount();
+});
+</script>
+                
+                <div class="content">
+                    <div class="page-header">
+                        <h2 class="page-title">
+                            <i class="fas fa-calendar-alt"></i>
+                            جدول الامتحانات
+                        </h2>
+                        <div class="student-info-badge">
+                            <span class="info-item">
+                                <i class="fas fa-user"></i> عباده سالم موسى الخمايسه
+                            </span>
+                            <span class="info-item">
+                                <i class="fas fa-university"></i> تكنولوجيا المعلومات
+                            </span>
+                            <span class="info-item">
+                                <i class="fas fa-id-card"></i> رقم الطالب: 120242222083
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle fa-lg"></i>
+                        <div>
+                            <strong>جدول الامتحانات الخاص بك</strong><br>
+                            يعرض هذا الجدول جميع الامتحانات المقررة لك حسب المواد المسجلة في الفصل الحالي.
+                        </div>
+                    </div>
+                    
+                    
+                    
+                    <div class="summary-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>إجمالي المواد</h4>
+                                <div class="stat-number">3</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="exam-card">
+                        <div class="exam-header">
+                            <i class="fas fa-calendar-check"></i>
+                            <h3>جدول الامتحانات - الفصل الدراسي الحالي</h3>
+                            <span class="exam-badge"><i class="fas fa-clock"></i> 3 مادة</span>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="exam-table" id="examTable">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>رقم المادة</th>
+                                        <th>اسم المادة</th>
+                                        <th>الشعبة</th>
+                                        <th>اليوم والتاريخ</th>
+                                        <th>الوقت</th>
+                                        <th>نوع الامتحان</th>
+                                        <th>القاعات / المواقع</th>
+                                        <th>الملاحظات</th>
+                                      </tr>
+                                </thead>
+                                <tbody id="examTableBody">
+                                    
+                                    <tr class="exam-row" data-type="all" data-day="2026/08/29">
+                                        <td><span class="serial-badge">1</span></td>
+                                        <td><span class="course-code">2211351</span></td>
+                                        <td style="text-align: right; font-weight: 500;">شبكات الحاسوب</td>
+                                        <td><span class="section-badge"><i class="fas fa-users"></i> 3</span></td>
+                                        <td>
+                                            <div class="day-info">
+                                                
+                                                    <i class="fas fa-calendar-day"></i>
+                                                    <span>2026/08/29</span>
+                                                    
+                                                        <small style="color: var(--gray);">(السبت)</small>
+                                                    
+                                                
+                                            </div>
+                                         </td>
+                                        <td>
+                                            
+                                                <div class="time-info">
+                                                    <i class="fas fa-clock"></i> 10:30-8:30
+                                                </div>
+                                            
+                                         </td>
+                                        <td>
+                                            <span class="exam-type-badge exam-type-other">
+                                                <i class="fas fa-graduation-cap"></i> محوسب - مختبرات الطب
+                                            </span>
+                                         </td>
+                                        <td>
+                                            
+                                                <button class="hall-btn" onclick="showHalls('hallModal_0', 'شبكات الحاسوب')">
+                                                    <i class="fas fa-door-open"></i>
+                                                    عرض القاعات (1)
+                                                </button>
+                                                
+                                                <!-- Modal for halls -->
+                                                <div id="hallModal_0" class="hall-modal">
+                                                    <div class="hall-modal-content">
+                                                        <div class="hall-modal-header">
+                                                            <h3><i class="fas fa-door-open"></i> شبكات الحاسوب</h3>
+                                                            <span class="hall-modal-close" onclick="closeModal('hallModal_0')">&times;</span>
+                                                        </div>
+                                                        <div class="hall-modal-body">
+                                                            <h4 style="margin-bottom: 15px; color: var(--primary);">القاعات والمواقع:</h4>
+                                                            <ul class="hall-list">
+                                                                
+                                                                    <li>
+                                                                        <i class="fas fa-door-open"></i>
+                                                                        <strong>-</strong>
+                                                                        
+                                                                    </li>
+                                                                
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                         </td>
+                                        <td>
+                                            
+                                                <small style="color: var(--gray);">
+                                                    <i class="fas fa-chalkboard-teacher"></i> أ.د. حمزه عيال سلمان
+                                                </small>
+                                            
+                                         </td>
+                                      </tr>
+                                    
+                                    <tr class="exam-row" data-type="all" data-day="2026/08/29">
+                                        <td><span class="serial-badge">2</span></td>
+                                        <td><span class="course-code">2222241</span></td>
+                                        <td style="text-align: right; font-weight: 500;">برمجة علوم البيانات والذكاء الأصطناعي</td>
+                                        <td><span class="section-badge"><i class="fas fa-users"></i> 1</span></td>
+                                        <td>
+                                            <div class="day-info">
+                                                
+                                                    <i class="fas fa-calendar-day"></i>
+                                                    <span>2026/08/29</span>
+                                                    
+                                                        <small style="color: var(--gray);">(السبت)</small>
+                                                    
+                                                
+                                            </div>
+                                         </td>
+                                        <td>
+                                            
+                                                <div class="time-info">
+                                                    <i class="fas fa-clock"></i> 13:00-11:00
+                                                </div>
+                                            
+                                         </td>
+                                        <td>
+                                            <span class="exam-type-badge exam-type-other">
+                                                <i class="fas fa-graduation-cap"></i> -
+                                            </span>
+                                         </td>
+                                        <td>
+                                            
+                                                <button class="hall-btn" onclick="showHalls('hallModal_1', 'برمجة علوم البيانات والذكاء الأصطناعي')">
+                                                    <i class="fas fa-door-open"></i>
+                                                    عرض القاعات (1)
+                                                </button>
+                                                
+                                                <!-- Modal for halls -->
+                                                <div id="hallModal_1" class="hall-modal">
+                                                    <div class="hall-modal-content">
+                                                        <div class="hall-modal-header">
+                                                            <h3><i class="fas fa-door-open"></i> برمجة علوم البيانات والذكاء الأصطناعي</h3>
+                                                            <span class="hall-modal-close" onclick="closeModal('hallModal_1')">&times;</span>
+                                                        </div>
+                                                        <div class="hall-modal-body">
+                                                            <h4 style="margin-bottom: 15px; color: var(--primary);">القاعات والمواقع:</h4>
+                                                            <ul class="hall-list">
+                                                                
+                                                                    <li>
+                                                                        <i class="fas fa-door-open"></i>
+                                                                        <strong>-</strong>
+                                                                        
+                                                                    </li>
+                                                                
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                         </td>
+                                        <td>
+                                            
+                                                <small style="color: var(--gray); display: flex; align-items: center; gap: 5px; justify-content: center;">
+                                                    <i class="fas fa-info-circle"></i> مشترك مع2222244
+                                                </small>
+                                            
+                                         </td>
+                                      </tr>
+                                    
+                                    <tr class="exam-row" data-type="all" data-day="2026/08/31">
+                                        <td><span class="serial-badge">3</span></td>
+                                        <td><span class="course-code">0301101</span></td>
+                                        <td style="text-align: right; font-weight: 500;">تفاضـــل وتكامـــل 1</td>
+                                        <td><span class="section-badge"><i class="fas fa-users"></i> 1</span></td>
+                                        <td>
+                                            <div class="day-info">
+                                                
+                                                    <i class="fas fa-calendar-day"></i>
+                                                    <span>2026/08/31</span>
+                                                    
+                                                        <small style="color: var(--gray);">(الإثنين)</small>
+                                                    
+                                                
+                                            </div>
+                                         </td>
+                                        <td>
+                                            
+                                                <div class="time-info">
+                                                    <i class="fas fa-clock"></i> 13:00-11:00
+                                                </div>
+                                            
+                                         </td>
+                                        <td>
+                                            <span class="exam-type-badge exam-type-other">
+                                                <i class="fas fa-graduation-cap"></i> -
+                                            </span>
+                                         </td>
+                                        <td>
+                                            
+                                                <button class="hall-btn" onclick="showHalls('hallModal_2', 'تفاضـــل وتكامـــل 1')">
+                                                    <i class="fas fa-door-open"></i>
+                                                    عرض القاعات (1)
+                                                </button>
+                                                
+                                                <!-- Modal for halls -->
+                                                <div id="hallModal_2" class="hall-modal">
+                                                    <div class="hall-modal-content">
+                                                        <div class="hall-modal-header">
+                                                            <h3><i class="fas fa-door-open"></i> تفاضـــل وتكامـــل 1</h3>
+                                                            <span class="hall-modal-close" onclick="closeModal('hallModal_2')">&times;</span>
+                                                        </div>
+                                                        <div class="hall-modal-body">
+                                                            <h4 style="margin-bottom: 15px; color: var(--primary);">القاعات والمواقع:</h4>
+                                                            <ul class="hall-list">
+                                                                
+                                                                    <li>
+                                                                        <i class="fas fa-door-open"></i>
+                                                                        <strong>مدرج(4)مجمع قديم</strong>
+                                                                        
+                                                                            <span style="margin-right: 10px; color: var(--gray);">
+                                                                                <i class="fas fa-map-marker-alt"></i> 1
+                                                                            </span>
+                                                                        
+                                                                    </li>
+                                                                
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                         </td>
+                                        <td>
+                                            
+                                                <small style="color: var(--gray);">
+                                                    <i class="fas fa-chalkboard-teacher"></i> د. رابعة المعايطة
+                                                </small>
+                                            
+                                         </td>
+                                      </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="section-card" style="margin-top: 20px;">
+                        <h3 class="section-title">
+                            <i class="fas fa-lightbulb"></i>
+                            تعليمات هامة
+                        </h3>
+                        <ul style="padding-right: 20px; margin: 0; line-height: 1.8;">
+                            <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 10px;"></i> يرجى الوصول إلى قاعة الامتحان قبل موعد الامتحان بنصف ساعة على الأقل.</li>
+                            <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 10px;"></i> يجب إحضار بطاقة الجامعة الشخصية وإبرازها عند دخول القاعة.</li>
+                            <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 10px;"></i> يمنع اصطحاب الهواتف النقالة أو أي أجهزة إلكترونية داخل قاعة الامتحان.</li>
+                            <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 10px;"></i> في حال وجود أي استفسار، يرجى مراجعة عمادة الكلية قبل موعد الامتحان بوقت كافٍ.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="quick-actions no-print">
+                        <a href="dashboard.jsp" class="action-btn">
+    <i class="fas fa-arrow-right"></i>
+    <span>العودة للرئيسية</span>
+</a>
+                        <button class="action-btn" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>تحديث البيانات</span>
+                        </button>
+                        <button class="action-btn" onclick="window.print()">
+                            <i class="fas fa-print"></i>
+                            <span>طباعة الجدول</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    
+
+<footer>
+    <div class="container">
+        <div class="footer-content">
+            <p>جميع الحقوق محفوظة &copy; 2026 - جامعة مؤتة</p>
+        </div>
+    </div>
+</footer>
+    
+    <script>
+        function showHalls(modalId, subjectName) {
+            var modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = "block";
+                // Close modal when clicking outside
+                window.onclick = function(event) {
+                    if (event.target == modal) {
+                        modal.style.display = "none";
+                    }
+                }
+            }
+        }
+        
+        function closeModal(modalId) {
+            var modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = "none";
+            }
+        }
+        
+        function refreshData() {
+            if (confirm('هل تريد تحديث البيانات؟')) {
+                location.reload();
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var alerts = document.querySelectorAll('.alert-success, .alert-info, .alert-warning, .alert-danger');
+            if (alerts.length > 0) {
+                setTimeout(function() {
+                    for (var j = 0; j < alerts.length; j++) {
+                        if (alerts[j]) {
+                            alerts[j].style.transition = 'opacity 0.5s';
+                            alerts[j].style.opacity = '0';
+                            setTimeout(function(index) {
+                                return function() {
+                                    if (alerts[index]) alerts[index].style.display = 'none';
+                                };
+                            }(j), 500);
+                        }
+                    }
+                }, 5000);
+            }
+        });
+        
+        if (window.history && window.history.pushState) {
+            history.pushState(null, null, location.href);
+            window.onpopstate = function() {
+                history.go(1);
+            };
+        }
+    </script>
+</body>
+</html>
