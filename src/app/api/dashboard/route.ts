@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseDashboardHtml } from '@/lib/parsers/dashboard.parser';
+import { ServerCache, CACHE_TTL } from '@/lib/server-cache';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,48 +16,44 @@ export async function GET(request: Request) {
     );
   }
 
+  const studentId = session.studentId || 'unknown';
+
+  // خدمة الكاش: إذا كانت البيانات محفوظة وحديثة — أرجعها فوراً دون طلب upstream
+  if (!forceRefresh) {
+    const cached = ServerCache.get(ServerCache.key(studentId, 'dashboard'));
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+  }
+
   try {
-    const { html, updatedCookies } = await MutahClient.fetchProtectedPage(
-      'dashboard.jsp',
-      session.cookies
-    );
+    // جلب dashboard و studmarks بالتوازي لتوفير الوقت
+    const [dashResult, marksResult] = await Promise.allSettled([
+      MutahClient.fetchProtectedPage('dashboard.jsp', session.cookies),
+      MutahClient.fetchProtectedPage('studmarks.jsp', session.cookies),
+    ]);
 
-    // تحديث الكوكيز في الجلسة إذا أرسل الخادم كوكيز جديدة
-    if (updatedCookies && updatedCookies !== session.cookies) {
-      session.cookies = updatedCookies;
-      await session.save();
-    }
+    const { html, updatedCookies } = dashResult.status === 'fulfilled'
+      ? dashResult.value
+      : { html: '', updatedCookies: '' };
 
-    // حفظ نسخة من الـ HTML لتحليل هيكل الجدول بدقة
-    try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const dumpPath = path.join(process.cwd(), 'fixtures/raw_pages/dashboard.html');
-      fs.writeFileSync(dumpPath, html, 'utf8');
-      console.log('[DEBUG] Saved dashboard.html (' + html.length + ' bytes)');
-    } catch (e) {
-      console.error('[DEBUG] Failed to save dashboard.html:', e);
-    }
+    const marksHtml = marksResult.status === 'fulfilled' ? marksResult.value.html : '';
 
-    let marksHtml = '';
-    try {
-      const marksRes = await MutahClient.fetchProtectedPage('studmarks.jsp', updatedCookies || session.cookies);
-      marksHtml = marksRes.html;
-      if (marksRes.updatedCookies && marksRes.updatedCookies !== session.cookies) {
-        session.cookies = marksRes.updatedCookies;
-        await session.save();
-      }
-    } catch (e) {
-      console.warn('[DASHBOARD] Could not fetch studmarks for GPA:', e);
+    // تحديث الكوكيز مرة واحدة
+    const finalCookies = updatedCookies || session.cookies;
+    if (finalCookies !== session.cookies) {
+      session.cookies = finalCookies;
     }
 
     const data = parseDashboardHtml(html, marksHtml);
+
+    // حفظ اسم الطالب في الجلسة إذا تغير
     if (data.studentName && data.studentName !== session.studentName) {
       session.studentName = data.studentName;
-      await session.save();
     }
+    await session.save();
 
-    // إثراء المقررات بأسماء الدكاترة والقاعات الدقيقة من جريدة المواد الرسمية (subp.mutah.edu.jo)
+    // إثراء بأسماء الدكاترة والقاعات من جريدة المواد
     if (data.courses && data.courses.length > 0) {
       try {
         const { SubpClient } = await import('@/lib/upstream/subp.client');
@@ -65,6 +62,9 @@ export async function GET(request: Request) {
         console.warn('[DASHBOARD] Could not enrich courses with subp:', err);
       }
     }
+
+    // حفظ في الكاش
+    ServerCache.set(ServerCache.key(studentId, 'dashboard'), data, CACHE_TTL.DASHBOARD);
 
     return NextResponse.json(data);
   } catch (error: any) {

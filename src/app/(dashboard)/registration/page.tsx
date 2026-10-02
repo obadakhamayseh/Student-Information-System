@@ -78,7 +78,7 @@ export default function RegistrationMenuPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/registration/menu', { cache: 'no-store' });
+      const res = await fetch(`/api/registration/menu${isManual ? '?refresh=true' : ''}`);
       const json = await res.json();
 
       if (res.status === 401) {

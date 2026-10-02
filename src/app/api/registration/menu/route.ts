@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseRegMenuHtml } from '@/lib/parsers/registration.parser';
+import { ServerCache, CACHE_TTL } from '@/lib/server-cache';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,6 +14,15 @@ export async function GET(request: Request) {
       { error: 'SESSION_EXPIRED', message: 'غير مسجل الدخول' },
       { status: 401 }
     );
+  }
+
+  const studentId = session.studentId || 'unknown';
+
+  if (!forceRefresh) {
+    const cached = ServerCache.get(ServerCache.key(studentId, 'registration'));
+    if (cached) {
+      return NextResponse.json(cached);
+    }
   }
 
   try {
@@ -36,6 +46,8 @@ export async function GET(request: Request) {
         console.warn('[REGMENU] Could not enrich registered courses with subp:', err);
       }
     }
+
+    ServerCache.set(ServerCache.key(studentId, 'registration'), data, CACHE_TTL.REGISTRATION);
 
     return NextResponse.json(data);
   } catch (error: any) {

@@ -32,20 +32,17 @@ export default function Header({
   });
 
   useEffect(() => {
-    // جلب بيانات الطالب الحقيقية من لوحة التحكم لتحديث الرأس ديناميكياً
+    // جلب بيانات الطالب من الجلسة المحلية (بدون أي طلب upstream) — سريع جداً
     async function fetchHeaderMeta() {
       try {
-        const res = await fetch('/api/dashboard', { cache: 'no-store' });
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
-          setStudentInfo({
+          setStudentInfo((prev) => ({
+            ...prev,
             id: json.studentId || initialStudentId,
             name: json.studentName || initialStudentName,
-            college: json.college,
-            major: json.major,
-            academicStatus: json.academicStatus,
-            currentSemester: json.currentSemester,
-          });
+          }));
         }
       } catch {
         // fallback to initial

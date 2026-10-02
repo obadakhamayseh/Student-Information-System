@@ -20,7 +20,7 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/dashboard', { cache: 'no-store' });
+      const res = await fetch(`/api/dashboard${isManualRefresh ? '?refresh=true' : ''}`);
       const json = await res.json();
 
       if (res.status === 401) {

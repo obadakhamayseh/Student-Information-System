@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseStudyPlanHtml } from '@/lib/parsers/plan.parser';
+import { ServerCache, CACHE_TTL } from '@/lib/server-cache';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('refresh') === 'true';
   const session = await getSession();
 
   if (!session.isLoggedIn || !session.cookies) {
@@ -11,6 +14,15 @@ export async function GET() {
       { error: 'SESSION_EXPIRED', message: 'غير مسجل الدخول' },
       { status: 401 }
     );
+  }
+
+  const studentId = session.studentId || 'unknown';
+
+  if (!forceRefresh) {
+    const cached = ServerCache.get(ServerCache.key(studentId, 'plan'));
+    if (cached) {
+      return NextResponse.json(cached);
+    }
   }
 
   try {
@@ -24,18 +36,10 @@ export async function GET() {
       await session.save();
     }
 
-    try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const dumpPath = path.join(process.cwd(), 'fixtures/raw_pages/treeplan.html');
-      fs.writeFileSync(dumpPath, html, 'utf8');
-      console.log('[DEBUG] Saved treeplan.html (' + html.length + ' bytes)');
-    } catch (e) {
-      console.error('[DEBUG] Failed to save treeplan.html:', e);
-    }
-
     const data = parseStudyPlanHtml(html);
-    console.log('[DEBUG] Parsed Plan Data:', { coursesCount: data.courses?.length, totalHours: data.totalHours });
+
+    ServerCache.set(ServerCache.key(studentId, 'plan'), data, CACHE_TTL.PLAN);
+
     return NextResponse.json(data);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {

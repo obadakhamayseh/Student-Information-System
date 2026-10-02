@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseDashboardHtml } from '@/lib/parsers/dashboard.parser';
+import { ServerCache, CACHE_TTL } from '@/lib/server-cache';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,8 +16,16 @@ export async function GET(request: Request) {
     );
   }
 
+  const studentId = session.studentId || 'unknown';
+
+  if (!forceRefresh) {
+    const cached = ServerCache.get(ServerCache.key(studentId, 'schedule'));
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+  }
+
   try {
-    // جلب المواد المسجلة للفصل الحالي من لوحة التحكم فقط
     const { html: dashHtml, updatedCookies } = await MutahClient.fetchProtectedPage(
       'dashboard.jsp',
       session.cookies
@@ -39,12 +48,16 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({
+    const responseData = {
       currentSemester: dashData.currentSemester || 'الفصل الحالي',
       totalRegisteredHours: dashData.registeredHours || 0,
       weeklySchedule,
       exams: [],
-    });
+    };
+
+    ServerCache.set(ServerCache.key(studentId, 'schedule'), responseData, CACHE_TTL.SCHEDULE);
+
+    return NextResponse.json(responseData);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {
       session.destroy();
@@ -56,7 +69,7 @@ export async function GET(request: Request) {
 
     console.error('Schedule fetch error:', error);
     return NextResponse.json(
-      { error: 'UPSTREAM_ERROR', message: error.message || 'فشل جلب جدول الامتحانات والمحاضرات' },
+      { error: 'UPSTREAM_ERROR', message: error.message || 'فشل جلب جدول المحاضرات' },
       { status: 500 }
     );
   }

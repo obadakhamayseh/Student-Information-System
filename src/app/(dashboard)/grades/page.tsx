@@ -27,7 +27,7 @@ export default function GradesPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/grades', { cache: 'no-store' });
+      const res = await fetch(`/api/grades${isManual ? '?refresh=true' : ''}`);
       const json = await res.json();
 
       if (res.status === 401) {

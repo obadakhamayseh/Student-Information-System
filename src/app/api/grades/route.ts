@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseTranscriptHtml } from '@/lib/parsers/grades.parser';
+import { ServerCache, CACHE_TTL } from '@/lib/server-cache';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('refresh') === 'true';
   const session = await getSession();
 
   if (!session.isLoggedIn || !session.cookies) {
@@ -11,6 +14,15 @@ export async function GET() {
       { error: 'SESSION_EXPIRED', message: 'غير مسجل الدخول' },
       { status: 401 }
     );
+  }
+
+  const studentId = session.studentId || 'unknown';
+
+  if (!forceRefresh) {
+    const cached = ServerCache.get(ServerCache.key(studentId, 'grades'));
+    if (cached) {
+      return NextResponse.json(cached);
+    }
   }
 
   try {
@@ -24,18 +36,10 @@ export async function GET() {
       await session.save();
     }
 
-    try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const dumpPath = path.join(process.cwd(), 'fixtures/raw_pages/studmarks.html');
-      fs.writeFileSync(dumpPath, html, 'utf8');
-      console.log('[DEBUG] Saved studmarks.html (' + html.length + ' bytes)');
-    } catch (e) {
-      console.error('[DEBUG] Failed to save studmarks.html:', e);
-    }
-
     const data = parseTranscriptHtml(html);
-    console.log('[DEBUG] Parsed Transcript Data:', JSON.stringify(data, null, 2));
+
+    ServerCache.set(ServerCache.key(studentId, 'grades'), data, CACHE_TTL.GRADES);
+
     return NextResponse.json(data);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {

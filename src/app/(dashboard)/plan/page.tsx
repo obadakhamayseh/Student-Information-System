@@ -40,7 +40,7 @@ export default function PlanPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/plan', { cache: 'no-store' });
+      const res = await fetch(`/api/plan${isManual ? '?refresh=true' : ''}`);
       const json = await res.json();
 
       if (res.status === 401) {

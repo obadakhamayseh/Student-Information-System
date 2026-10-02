@@ -20,7 +20,7 @@ export default function SchedulePage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/schedule', { cache: 'no-store' });
+      const res = await fetch(`/api/schedule${isManual ? '?refresh=true' : ''}`);
       const json = await res.json();
 
       if (res.status === 401) {
