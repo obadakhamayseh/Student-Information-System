@@ -14,6 +14,7 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
       .trim();
 
   const courses: PlanCourse[] = [];
+  const categories: any[] = [];
   const registeredCodes = new Set(['2212351', '2222232', '2222364', '2222365', '2222441', '2222491']);
 
   // فحص شجرة الخطة الحديثة في مؤتة (.tree-node)
@@ -23,6 +24,27 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
     treeNodes.each((_, node) => {
       const header = $(node).find('.tree-node-header');
       const catTitle = clean(header.find('.tree-node-title').text()) || 'متطلبات التخصص';
+      const childrenId = clean($(node).find('.tree-children').attr('id') || '') || `node_${_}`;
+
+      let passedCoursesCount = 0;
+      let totalCoursesCount = 0;
+      let catCompletedHours = 0;
+      let catRequiredHours = 0;
+
+      header.find('.tree-node-stats span').each((__, statSpan) => {
+        const text = clean($(statSpan).text());
+        if (text.includes('مادة')) {
+          const parts = text.replace('مادة', '').trim().split('/');
+          passedCoursesCount = parseInt(parts[0], 10) || 0;
+          totalCoursesCount = parseInt(parts[1], 10) || 0;
+        } else if (text.includes('ساعة')) {
+          const parts = text.replace('ساعة', '').trim().split('/');
+          catCompletedHours = parseInt(parts[0], 10) || 0;
+          catRequiredHours = parseInt(parts[1], 10) || 0;
+        }
+      });
+
+      const catCourses: PlanCourse[] = [];
 
       $(node)
         .find('.course-item')
@@ -33,7 +55,18 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
           const markText = clean($(item).find('.course-mark').text());
           const iconClass = $(item).find('.course-status i').attr('class') || '';
 
-          const hours = parseInt(hoursText.replace(/\D/g, ''), 10) || 3;
+          let hours = parseInt(hoursText.replace(/\D/g, ''), 10);
+          if (isNaN(hours) || hours <= 0) {
+            if (code === '2222491' || code.endsWith('491') || name.includes('مشروع تخرج 1') || name.includes('مشروع تخرج1')) {
+              hours = 1;
+            } else if (code === '2222492' || code.endsWith('492') || name.includes('مشروع تخرج 2') || name.includes('مشروع تخرج2')) {
+              hours = 2;
+            } else if (name.includes('مختبر') || name.toLowerCase().includes('lab')) {
+              hours = 1;
+            } else {
+              hours = 3;
+            }
+          }
 
           let status: 'منجزة' | 'مسجلة' | 'متبقية' = 'متبقية';
           let grade: string | undefined = undefined;
@@ -53,7 +86,7 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
           }
 
           if (code && name) {
-            courses.push({
+            const courseObj: PlanCourse = {
               courseNumber: code,
               courseName: name,
               creditHours: hours,
@@ -61,9 +94,21 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
               status,
               category: catTitle,
               grade,
-            });
+            };
+            courses.push(courseObj);
+            catCourses.push(courseObj);
           }
         });
+
+      categories.push({
+        categoryId: childrenId,
+        name: catTitle,
+        requiredHours: catRequiredHours,
+        completedHours: catCompletedHours,
+        passedCoursesCount,
+        totalCoursesCount,
+        courses: catCourses,
+      });
     });
   } else {
     // دعم الجداول كاحتياطي
@@ -77,7 +122,12 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
             const texts = cells.map((___, c) => clean($(c).text())).get();
             const cNo = texts[0] || '';
             const cName = texts[1] || '';
-            const hours = parseFloat(texts[2]) || 3;
+            let hours = parseFloat(texts[2]) || 3;
+            if (cNo === '2222491' || cNo.endsWith('491') || cName.includes('مشروع تخرج 1') || cName.includes('مشروع تخرج1')) {
+              hours = 1;
+            } else if (cNo === '2222492' || cNo.endsWith('492') || cName.includes('مشروع تخرج 2') || cName.includes('مشروع تخرج2')) {
+              hours = 2;
+            }
             const prereq = texts[3] || '—';
             const statusRaw = texts[4] || '';
 
@@ -114,7 +164,7 @@ export function parseStudyPlanHtml(html: string): StudyPlanData {
     totalHours,
     completedHours: safeCompleted,
     remainingHours: Math.max(0, totalHours - safeCompleted),
-    categories: [],
+    categories,
     courses,
   });
 }

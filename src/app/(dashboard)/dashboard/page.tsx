@@ -3,22 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  GraduationCap,
-  TrendingUp,
-  Award,
-  BookCheck,
-  Clock,
-  User,
-  ShieldCheck,
-  RefreshCw,
-  AlertCircle,
-  Calendar,
-  Layers,
-  ChevronDown,
-  Sparkles,
-  ExternalLink,
-} from 'lucide-react';
 import type { DashboardData } from '@/lib/schemas/student.schema';
 
 export default function DashboardPage() {
@@ -27,7 +11,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showRawAttributes, setShowRawAttributes] = useState(false);
+  const [syncStatusText, setSyncStatusText] = useState<string>('تحديث المطابقة اللحظية');
+  const [currentDateString, setCurrentDateString] = useState<string>('جارٍ التحميل...');
 
   const fetchDashboard = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -59,35 +44,59 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
+    try {
+      const now = new Date();
+      const formatted = now.toLocaleDateString('ar-JO', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+      setCurrentDateString(formatted);
+    } catch {
+      setCurrentDateString('اليوم');
+    }
   }, []);
+
+  const handleManualSync = async () => {
+    setRefreshing(true);
+    setSyncStatusText('جارٍ المطابقة...');
+    await fetchDashboard(true);
+    setSyncStatusText('تم التحديث بنجاح');
+    setTimeout(() => {
+      setSyncStatusText('تحديث المطابقة اللحظية');
+    }, 1500);
+  };
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-        {/* Loading Skeletons */}
-        <div className="h-28 bg-slate-900/60 rounded-3xl border border-slate-800 animate-pulse flex items-center px-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse" />
+      <div className="flex flex-col w-full gap-space-lg animate-pulse">
+        <div className="h-32 bg-surface-container-low rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-space-md">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-36 bg-surface-container-low rounded-xl" />
           ))}
         </div>
-        <div className="h-64 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+          <div className="lg:col-span-8 h-80 bg-surface-container-low rounded-xl" />
+          <div className="lg:col-span-4 h-80 bg-surface-container-low rounded-xl" />
+        </div>
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="max-w-xl mx-auto px-4 pt-16 text-center">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-300">
-          <AlertCircle className="w-10 h-10 mx-auto text-red-400 mb-3" />
-          <h2 className="text-lg font-bold text-white mb-2">تعذر جلب البيانات</h2>
-          <p className="text-xs text-slate-300 mb-6">{error}</p>
+      <div className="max-w-xl mx-auto pt-16 text-center">
+        <div className="bg-error-container/20 border border-error/30 rounded-2xl p-6 text-on-surface">
+          <span className="material-symbols-outlined text-4xl text-error mb-3">error</span>
+          <h2 className="text-lg font-bold text-primary mb-2">تعذر جلب البيانات</h2>
+          <p className="text-xs text-on-surface-variant mb-6">{error}</p>
           <button
             onClick={() => fetchDashboard(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-xl transition-colors inline-flex items-center gap-2"
+            className="px-4 py-2 bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-2 cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="material-symbols-outlined text-base">refresh</span>
             <span>إعادة المحاولة</span>
           </button>
         </div>
@@ -95,287 +104,579 @@ export default function DashboardPage() {
     );
   }
 
-  const passedPercentage = Math.min(
-    100,
-    Math.round(((data?.passedHours || 0) / 132) * 100)
-  );
+  const passedHrs = Number(data?.passedHours) || 0;
+  const passedPercentage = Math.min(100, Math.round((passedHrs / 132) * 100));
+  const remainingHrs = Math.max(0, 132 - passedHrs);
+  const regHrs = Number(data?.registeredHours) || 0;
+  const coursesList = data?.courses || [];
+
+  const cumGpaNum = parseFloat(data?.cumulativeGpa || '0');
+  const isOutOf100 = cumGpaNum > 4;
+  const cumRating = isOutOf100
+    ? cumGpaNum >= 84
+      ? 'ممتاز'
+      : cumGpaNum >= 76
+      ? 'جيد جداً'
+      : cumGpaNum >= 68
+      ? 'جيد'
+      : cumGpaNum >= 60
+      ? 'مقبول'
+      : 'ضعيف'
+    : cumGpaNum >= 3.65
+    ? 'ممتاز'
+    : cumGpaNum >= 3.0
+    ? 'جيد جداً'
+    : cumGpaNum >= 2.5
+    ? 'جيد'
+    : cumGpaNum >= 2.0
+    ? 'مقبول'
+    : '—';
+
+  const semGpaNum = parseFloat(data?.semesterGpa || '0');
+  const semRating = isOutOf100
+    ? semGpaNum >= 84
+      ? 'ممتاز'
+      : semGpaNum >= 76
+      ? 'جيد جداً'
+      : semGpaNum >= 68
+      ? 'جيد'
+      : semGpaNum >= 60
+      ? 'مقبول'
+      : '—'
+    : semGpaNum >= 3.65
+    ? 'ممتاز'
+    : semGpaNum >= 3.0
+    ? 'جيد جداً'
+    : semGpaNum >= 2.5
+    ? 'جيد'
+    : semGpaNum >= 2.0
+    ? 'مقبول'
+    : '—';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
-      {/* بطاقة الترحيب العلوية */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs text-blue-400 font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>مرحباً بك في بوابتك الجامعية</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {data?.studentName || 'طالب مؤتة'}
-            </h1>
-            <p className="text-xs text-slate-400">
-              {data?.major || 'التخصص الجامعي'} • {data?.college || 'جامعة مؤتة'}
-            </p>
+    <div className="flex flex-col w-full">
+      {/* Top Greeting & Real-time Live Sync Strip */}
+      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md mb-space-lg bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container-high/40">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-space-xs text-secondary font-label-md">
+            <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+            <span className="material-symbols-outlined text-sm">verified</span>
+            <span>بث بيانات لحظي مشفر • خادم التسجيل الرئيسي Mutah SIS</span>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>بيانات حية من الخادم</span>
-            </div>
-
-            <button
-              onClick={() => fetchDashboard(true)}
-              disabled={refreshing}
-              title="تحديث البيانات لحظياً"
-              className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* المؤشرات الأكاديمية الرئيسية (Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* المعدل التراكمي */}
-        <div className="bg-slate-900/70 backdrop-blur-sm border border-slate-800/90 rounded-2xl p-5 hover:border-blue-500/40 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-slate-400">المعدل التراكمي</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <Award className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
-              {data?.cumulativeGpa || '0.00'}
-            </span>
-            <span className="text-xs text-slate-500">%</span>
-          </div>
-          <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3 text-emerald-400" />
-            <span>السجل الأكاديمي الشامل</span>
-          </div>
-        </div>
-
-        {/* المعدل الفصلي */}
-        <div className="bg-slate-900/70 backdrop-blur-sm border border-slate-800/90 rounded-2xl p-5 hover:border-indigo-500/40 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-slate-400">المعدل الفصلي الأخير</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
-              {data?.semesterGpa || '0.00'}
-            </span>
-            <span className="text-xs text-slate-500">%</span>
-          </div>
-          <div className="mt-2 text-[11px] text-slate-400">
-            <span>{data?.currentSemester || 'الفصل الدراسي الأخير'}</span>
-          </div>
-        </div>
-
-        {/* الساعات المقطوعة ونسبة الإنجاز */}
-        <div className="bg-slate-900/70 backdrop-blur-sm border border-slate-800/90 rounded-2xl p-5 hover:border-emerald-500/40 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-slate-400">الساعات المجتازة</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <BookCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
-              {data?.passedHours || 0}
-            </span>
-            <span className="text-xs text-slate-500">ساعة</span>
-          </div>
-          <div className="mt-3">
-            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${passedPercentage}%` }}
-              />
-            </div>
-            <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1">
-              <span>نسبة الإنجاز</span>
-              <span>{passedPercentage}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* الساعات المسجلة للفصل الحالي */}
-        <div className="bg-slate-900/70 backdrop-blur-sm border border-slate-800/90 rounded-2xl p-5 hover:border-amber-500/40 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-slate-400">الساعات المسجلة</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
-              {data?.registeredHours || 0}
-            </span>
-            <span className="text-xs text-slate-500">ساعة هذا الفصل</span>
-          </div>
-          <div className="mt-2 text-[11px] text-slate-400">
-            <span>الحالة: {data?.academicStatus || 'منتظم'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* تفاصيل الملف الأكاديمي والروابط السريعة */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* معلومات الطالب الأكاديمية */}
-        <div className="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
-          <h2 className="text-base font-bold text-white flex items-center gap-2 mb-4">
-            <User className="w-4 h-4 text-blue-400" />
-            <span>بيانات القيد الأكاديمي</span>
+          <h2 className="font-headline-xl text-headline-xl text-primary font-bold tracking-tight">
+            مرحباً بك، {data?.studentName || 'طالب جامعة مؤتة'}
           </h2>
+          <p className="font-body-md text-body-md text-on-surface-variant flex items-center gap-2 flex-wrap">
+            <span className="material-symbols-outlined text-base">today</span>
+            <span id="academic-live-date">{currentDateString}</span>
+            <span>•</span>
+            <span>{data?.college || 'جامعة مؤتة'}</span>
+            <span>•</span>
+            <span>{data?.major || 'التخصص الأكاديمي'}</span>
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80">
-              <span className="text-slate-500 block mb-1">الرقم الجامعي</span>
-              <span className="font-mono text-sm text-slate-200">{data?.studentId || '—'}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80">
-              <span className="text-slate-500 block mb-1">اسم الطالب الكامل</span>
-              <span className="text-sm font-medium text-slate-200">{data?.studentName || '—'}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80">
-              <span className="text-slate-500 block mb-1">الكلية</span>
-              <span className="text-sm text-slate-200">{data?.college || '—'}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80">
-              <span className="text-slate-500 block mb-1">التخصص</span>
-              <span className="text-sm text-slate-200">{data?.major || '—'}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80">
-              <span className="text-slate-500 block mb-1">المرشد الأكاديمي</span>
-              <span className="text-sm text-slate-200">{data?.advisor || '—'}</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80">
-              <span className="text-slate-500 block mb-1">الحالة الأكاديمية</span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-medium">
-                {data?.academicStatus || 'منتظم'}
+        {/* Quick Action / Verification Pill */}
+        <div className="flex flex-wrap items-center gap-space-sm">
+          <div className="bg-surface-container-low px-space-md py-2.5 rounded-lg flex items-center gap-space-sm text-on-surface border border-surface-container-high/40">
+            <span className="material-symbols-outlined text-secondary text-xl">shield_check</span>
+            <div className="flex flex-col">
+              <span className="font-label-sm text-label-sm text-on-surface-variant">الرقم الجامعي</span>
+              <span className="font-label-md text-label-md font-bold text-primary" dir="ltr">
+                {data?.studentId || '—'}
               </span>
             </div>
           </div>
+          <button
+            className="bg-primary hover:bg-primary-container text-on-primary px-space-md py-2.5 rounded-lg font-label-lg flex items-center gap-space-xs transition-all shadow-sm active:scale-95 disabled:opacity-75 cursor-pointer"
+            onClick={handleManualSync}
+            disabled={refreshing}
+          >
+            <span className={`material-symbols-outlined text-lg ${refreshing ? 'animate-spin' : ''}`}>
+              refresh
+            </span>
+            <span>{syncStatusText}</span>
+          </button>
         </div>
+      </section>
 
-        {/* روابط سريعة للخدمات */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-400" />
-            <span>الخدمات والأقسام</span>
-          </h2>
-
-          <div className="space-y-2.5">
-            <Link
-              href="/registration"
-              className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-blue-900/30 to-indigo-900/30 hover:from-blue-900/50 hover:to-indigo-900/50 border border-blue-500/30 text-slate-200 hover:text-white transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-white">التسجيل الإلكتروني والخطة</div>
-                  <div className="text-[10px] text-blue-300">تسجيل المواد وإسقاطها بالخطة</div>
-                </div>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300 transition-colors" />
-            </Link>
-
-            <Link
-              href="/grades"
-              className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 text-slate-200 hover:text-white transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                  <Award className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold">كشف العلامات الفصلي والتراكمي</div>
-                  <div className="text-[10px] text-slate-400">سجل الدرجات وتطور المعدل</div>
-                </div>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 transition-colors" />
-            </Link>
-
-            <Link
-              href="/schedule"
-              className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 text-slate-200 hover:text-white transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold">الجدول الدراسي والامتحانات</div>
-                  <div className="text-[10px] text-slate-400">مواعيد القاعات والمحاضرات</div>
-                </div>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 transition-colors" />
-            </Link>
-
-            <Link
-              href="/plan"
-              className="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 text-slate-200 hover:text-white transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                  <GraduationCap className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold">الخطة الشجرية للمواد</div>
-                  <div className="text-[10px] text-slate-400">المواد المتبقية وشجرة المتطلبات</div>
-                </div>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
-            </Link>
+      {/* 5 Stat Bento Grid */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-space-md mb-space-lg sm:mb-space-xl">
+        {/* Stat 1: Cumulative GPA */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-primary"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">المعدل التراكمي (CGPA)</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-lg">workspace_premium</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-primary" dir="ltr">
+              {data?.cumulativeGpa || '0.00'}
+            </span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">
+              / {isOutOf100 ? '100' : '4.00'}
+            </span>
+          </div>
+          <div className="mt-space-sm flex items-center justify-between pt-space-xs bg-surface-container-low px-2 py-1.5 rounded">
+            <span className="font-label-sm text-label-sm text-on-surface font-semibold">
+              التقدير: {cumRating}
+            </span>
+            <span className="font-label-sm text-label-sm text-secondary font-bold">معتمد</span>
           </div>
         </div>
-      </div>
 
-      {/* مستكشف البيانات الأصلية المطابقة (Raw Data Parity Inspector) */}
-      {data?.rawAttributes && Object.keys(data.rawAttributes).length > 0 && (
-        <div className="border border-slate-800 rounded-2xl bg-slate-900/50 overflow-hidden">
-          <button
-            onClick={() => setShowRawAttributes(!showRawAttributes)}
-            className="w-full p-4 flex items-center justify-between text-xs font-medium text-slate-400 hover:text-white transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-blue-400" />
-              <span>مراجعة الحقول الأصلية المستخرجة مباشرة من البوابة ({Object.keys(data.rawAttributes).length} حقل)</span>
+        {/* Stat 2: Semester GPA */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-secondary"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">المعدل الفصلي</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+              <span className="material-symbols-outlined text-lg">trending_up</span>
             </div>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${showRawAttributes ? 'rotate-180' : ''}`}
-            />
-          </button>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-secondary" dir="ltr">
+              {data?.semesterGpa || '0.00'}
+            </span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">
+              / {isOutOf100 ? '100' : '4.00'}
+            </span>
+          </div>
+          <div className="mt-space-sm flex items-center justify-between pt-space-xs bg-surface-container-low px-2 py-1.5 rounded">
+            <span className="font-label-sm text-label-sm text-on-surface font-semibold">
+              التقدير: {semRating}
+            </span>
+            <span className="font-label-sm text-label-sm text-secondary font-bold">
+              {data?.lastSemesterName || 'الفصل الصيفي 2025/2026'}
+            </span>
+          </div>
+        </div>
 
-          {showRawAttributes && (
-            <div className="p-4 pt-0 border-t border-slate-800/60">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs pt-3">
-                {Object.entries(data.rawAttributes).map(([k, v]) => (
-                  <div key={k} className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-                    <span className="text-slate-500 block text-[10px]">{k}</span>
-                    <span className="text-slate-200 font-mono text-[11px]">{v}</span>
-                  </div>
-                ))}
+        {/* Stat 3: Study Hours Progress */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-primary-container"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">ساعات النجاح المنجزة</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-lg">school</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-primary">{passedHrs}</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">من 132 ساعة</span>
+          </div>
+          <div className="mt-space-sm flex flex-col gap-1.5">
+            <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-secondary h-full rounded-full transition-all duration-700"
+                style={{ width: `${passedPercentage}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between items-center font-label-sm text-label-sm text-on-surface-variant">
+              <span>التقدم: {passedPercentage}%</span>
+              <span>متبقي {remainingHrs} س.م</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stat 4: Financial Status */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-secondary"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">الرصيد المالي الحالي</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+              <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-on-surface" dir="ltr">
+              {data?.financialBalance || '0.00 د.أ'}
+            </span>
+          </div>
+          <div className="mt-space-sm flex items-center justify-between pt-space-xs bg-surface-container-low px-2 py-1.5 rounded">
+            <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-xs">check_circle</span>
+              مدفوع: {data?.paidHours || 0} س
+            </span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
+              {data?.financialBalance?.includes('-') ? 'مستحق للدفع' : 'رصيد سليم'}
+            </span>
+          </div>
+        </div>
+
+        {/* Stat 5: Registered Courses */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-on-tertiary-container"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">المساقات المسجلة</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-lg">menu_book</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-primary">
+              {coursesList.length}
+            </span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">مواد دراسية</span>
+          </div>
+          <div className="mt-space-sm flex items-center justify-between pt-space-xs bg-surface-container-low px-2 py-1.5 rounded">
+            <span className="font-label-sm text-label-sm text-on-surface">{regHrs} ساعة معتمدة</span>
+            <span className="font-label-sm text-label-sm bg-surface-container-highest text-primary px-2 py-0.5 rounded font-bold">
+              حالة: مثبتة
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Bento Section: Lectures & Academic Standing */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg mb-space-xl">
+        {/* Right Panel (8 Cols): Today's Schedule Table */}
+        <section className="lg:col-span-8 flex flex-col bg-surface-container-lowest rounded-xl shadow-sm p-space-lg border border-surface-container-high/40">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md gap-2 border-b border-surface-container-high/40">
+            <div className="flex items-center gap-space-sm">
+              <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined">schedule</span>
+              </div>
+              <div>
+                <h3 className="font-headline-md text-headline-md text-primary font-bold">
+                  المواد المسجلة في الفصل الحالي
+                </h3>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">
+                  الجدول الأكاديمي المعتمد والمثبت في سجل الطالب
+                </span>
               </div>
             </div>
-          )}
-        </div>
-      )}
+            <div className="inline-flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-lg text-primary font-label-md">
+              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+              <span>{coursesList.length} مساقات مسجلة</span>
+            </div>
+          </div>
+
+          {/* Mobile View: High-clarity Course Cards (sm:hidden) */}
+          <div className="block sm:hidden divide-y divide-surface-container-high/50 mt-space-sm">
+            {coursesList.length > 0 ? (
+              coursesList.map((course, idx) => (
+                <div key={course.courseNumber || idx} className="p-3 flex flex-col gap-1.5 bg-surface-container-lowest">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-primary text-sm">{course.courseName}</h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-mono text-[11px] bg-surface-container-high px-1.5 py-0.5 rounded text-on-surface-variant" dir="ltr">
+                          {course.courseNumber}
+                        </span>
+                        <span className="bg-surface-container-high text-primary px-2 py-0.5 rounded-full text-[11px] font-semibold">
+                          شعبة {course.section || '1'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-label-md text-xs font-semibold text-primary font-mono shrink-0" dir="ltr">
+                      {course.time || '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-on-surface-variant pt-1 border-t border-surface-container-high/30">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-secondary text-sm">location_on</span>
+                      <span>{course.room || 'تُحدد لاحقاً'}</span>
+                    </span>
+                    <span className="text-[11px] font-medium text-secondary">
+                      {course.days || '—'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-6 text-center text-sm text-on-surface-variant">
+                لا توجد مواد مسجلة حالياً في جدول الفصل.
+              </div>
+            )}
+          </div>
+
+          {/* Schedule Table (Desktop & Scrollable) */}
+          <div className="hidden sm:block overflow-x-auto w-full mt-space-sm">
+            <table className="w-full min-w-[580px] text-right border-collapse">
+              <thead>
+                <tr className="bg-surface-container-low text-primary font-label-md">
+                  <th className="py-3 px-space-md rounded-r-lg">المساق والرمز</th>
+                  <th className="py-3 px-space-md">القاعة والمبنى</th>
+                  <th className="py-3 px-space-md">التوقيت</th>
+                  <th className="py-3 px-space-md">الأيام</th>
+                  <th className="py-3 px-space-md rounded-l-lg text-center">الشعبة</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-container-high/40 text-on-surface font-body-md">
+                {coursesList.length > 0 ? (
+                  coursesList.map((course, idx) => (
+                    <tr
+                      key={course.courseNumber || idx}
+                      className="hover:bg-surface-container-low/70 transition-colors"
+                    >
+                      <td className="py-3.5 px-space-md">
+                        <div className="flex flex-col">
+                          <span className="font-label-lg text-label-lg font-bold text-primary">
+                            {course.courseName}
+                          </span>
+                          <span
+                            className="font-label-sm text-label-sm text-on-surface-variant font-mono"
+                            dir="ltr"
+                          >
+                            {course.courseNumber}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-space-md">
+                        <div className="flex items-center gap-1.5 text-on-surface">
+                          <span className="material-symbols-outlined text-secondary text-base">
+                            location_on
+                          </span>
+                          <span>{course.room || 'تُحدد لاحقاً'}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-space-md font-label-md font-semibold text-primary" dir="ltr">
+                        {course.time || '—'}
+                      </td>
+                      <td className="py-3.5 px-space-md text-on-surface-variant font-label-sm">
+                        {course.days || '—'}
+                      </td>
+                      <td className="py-3.5 px-space-md text-center">
+                        <span className="bg-surface-container-high text-primary px-2.5 py-1 rounded-full font-label-sm font-semibold">
+                          شعبة {course.section || '1'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-on-surface-variant">
+                      لا توجد مواد مسجلة حالياً في جدول الفصل.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer Micro-bar inside schedule */}
+          <div className="mt-auto pt-space-md flex flex-wrap items-center justify-between text-xs text-on-surface-variant border-t border-surface-container-high/40">
+            <span className="flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm text-secondary">info</span>
+              بيانات الحضور والغياب يتم احتسابها تلقائياً عبر نظام البوابة المركزية.
+            </span>
+            <Link
+              className="text-secondary font-label-md hover:underline flex items-center gap-0.5 cursor-pointer"
+              href="/schedule"
+            >
+              عرض جدول الأسبوع كاملاً
+              <span className="material-symbols-outlined text-sm">chevron_left</span>
+            </Link>
+          </div>
+        </section>
+
+        {/* Left Panel (4 Cols): Academic Standing & Warnings Card */}
+        <section className="lg:col-span-4 flex flex-col gap-space-md">
+          {/* Status Box */}
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col justify-between h-full border border-surface-container-high/40">
+            <div>
+              <div className="flex items-center justify-between pb-space-sm border-b border-surface-container-high/40">
+                <span className="font-label-lg text-label-lg font-bold text-primary">
+                  الملف الأكاديمي والخدمة
+                </span>
+                <span className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">verified_user</span>
+                </span>
+              </div>
+              <div className="p-space-md rounded-xl bg-surface-container-low my-space-md flex flex-col gap-2 border border-surface-container-high/40">
+                <div className="flex items-center gap-2 text-secondary font-headline-sm text-headline-sm font-bold">
+                  <span className="material-symbols-outlined">check_circle</span>
+                  <span>الوضع الأكاديمي: {data?.academicStatus || 'منتظم'}</span>
+                </div>
+                <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                  سجل الطالب سليم في عمادة القبول والتسجيل • نوع الدراسة: البرنامج العادي.
+                </p>
+              </div>
+              <div className="space-y-space-sm mt-space-md">
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
+                  <span className="font-label-md text-label-md text-on-surface-variant">خدمة العلم:</span>
+                  <span className="text-secondary font-bold font-label-md">
+                    {data?.militaryStatus || (data?.militaryExpireDate ? `تاريخ الانتهاء: ${data.militaryExpireDate}` : 'مستوفى')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
+                  <span className="font-label-md text-label-md text-on-surface-variant">ملاحظات القبول والتسجيل:</span>
+                  <span className="bg-surface-container-high text-primary font-bold px-2 py-0.5 rounded font-label-md">
+                    {data?.acceptanceNotesCount ?? 0} ملاحظات
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
+                  <span className="font-label-md text-label-md text-on-surface-variant">ملاحظات الشؤون المالية:</span>
+                  <span className="bg-surface-container-high text-primary font-bold px-2 py-0.5 rounded font-label-md">
+                    {data?.financialNotesCount ?? 0} ملاحظات
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
+                  <span className="font-label-md text-label-md text-on-surface-variant">المرشد الأكاديمي:</span>
+                  <span className="text-primary font-bold font-label-md">
+                    {data?.advisor && data.advisor !== '—' ? data.advisor : 'عمادة الكلية'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Trust Seal */}
+            <div className="mt-space-lg p-space-sm rounded-lg bg-surface-container-high/50 flex items-center gap-space-sm border border-surface-container-high/50">
+              <span className="material-symbols-outlined text-secondary text-2xl">fingerprint</span>
+              <div className="flex flex-col">
+                <span className="font-label-sm text-label-sm text-primary font-bold">
+                  تكامل مباشر عبر بروتوكول BFF
+                </span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  مطابق 100% مع بيانات الخادم الرسمي
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* Lower Section: Mutah University Calendar & Official Announcements */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+        {/* Announcements & Calendar (8 cols) */}
+        <section className="lg:col-span-8 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col border border-surface-container-high/40">
+          <div className="flex items-center justify-between pb-space-md border-b border-surface-container-high/40">
+            <div className="flex items-center gap-space-sm">
+              <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined">campaign</span>
+              </div>
+              <div>
+                <h3 className="font-headline-md text-headline-md text-primary font-bold">
+                  إعلانات التقويم الأكاديمي لجامعة مؤتة
+                </h3>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">
+                  القرارات الرسمية الصادرة عن عمادة القبول والتسجيل
+                </span>
+              </div>
+            </div>
+            <span className="font-label-sm text-label-sm bg-surface-container-high text-primary px-2.5 py-1 rounded font-bold">
+              {data?.currentSemester || 'الفصل الحالي'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md mt-space-sm">
+            {/* Notice 1 */}
+            <div className="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between group hover:bg-surface-container-high transition-colors border border-surface-container-high/40">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="bg-primary text-on-primary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold">
+                    الامتحانات الجامعية
+                  </span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">معتمد</span>
+                </div>
+                <h4 className="font-headline-sm text-headline-sm font-bold text-primary">
+                  جدول ومواعيد الامتحانات
+                </h4>
+                <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+                  تعلن عمادة القبول والتسجيل عن نشر مواعيد وقاعات الامتحانات الرسمية على البوابة الإلكترونية.
+                </p>
+              </div>
+              <div className="pt-space-md flex items-center justify-between">
+                <Link
+                  href="/schedule"
+                  className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xs">calendar_month</span>
+                  عرض برنامج الامتحانات
+                </Link>
+                <span className="material-symbols-outlined text-on-surface-variant group-hover:-translate-x-1 transition-transform">
+                  chevron_left
+                </span>
+              </div>
+            </div>
+
+            {/* Notice 2 */}
+            <div className="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between group hover:bg-surface-container-high transition-colors border border-surface-container-high/40">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="bg-secondary text-on-secondary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold">
+                    الخطة والتسجيل
+                  </span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">إرشاد أكاديمي</span>
+                </div>
+                <h4 className="font-headline-sm text-headline-sm font-bold text-primary">
+                  الخطة الدراسية وتدقيق المواد
+                </h4>
+                <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+                  يرجى مراجعة المواد المتبقية من الخطة الشجرية والتأكد من استيفاء المتطلبات السابقة للفصول القادمة.
+                </p>
+              </div>
+              <div className="pt-space-md flex items-center justify-between">
+                <Link
+                  href="/plan"
+                  className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-xs">account_tree</span>
+                  استعراض الخطة والشجرة
+                </Link>
+                <span className="material-symbols-outlined text-on-surface-variant group-hover:-translate-x-1 transition-transform">
+                  chevron_left
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Campus & University Identity Panel (4 cols) */}
+        <section className="lg:col-span-4 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between border border-surface-container-high/40">
+          <div className="flex flex-col gap-space-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-label-lg text-label-lg font-bold text-primary">
+                محيط الحرم الجامعي
+              </span>
+              <span className="font-label-sm text-label-sm text-on-surface-variant">الكرك - مؤتة</span>
+            </div>
+            <div className="relative w-full h-36 rounded-lg overflow-hidden shadow-inner bg-primary-container">
+              <img
+                className="w-full h-full object-cover"
+                alt="جامعة مؤتة"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJmVuZIpj5Y1k7cptcn6e2bnLlwDLFhNAcNuMhRcpQmUlBzMP2H9u6yDa-CwwOUZnYAMwH-uGo7XzZY5H_Blnx-Obh8YJXI2lC83_oc0fERaYO5jbiNHb7SEjqEEgAfWG61-8gvcep9CIH6qkufQ0ugdJW8gGyGkKXufKbnzQTEmEo0pwIffx4Mx1EPxUiIQH7FRbwIuXCIKHTYg172fjnDsZlRrZkb2EirtjSA7RpBWf8jJD5wzS1AQ"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent flex items-end p-space-sm">
+                <span className="text-on-primary font-label-md font-semibold">
+                  جامعة مؤتة • شعلة المعرفة والكرامة
+                </span>
+              </div>
+            </div>
+            <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1 text-xs text-on-surface border border-surface-container-high/40">
+              <div className="flex justify-between font-label-sm">
+                <span className="text-on-surface-variant">الكلية:</span>
+                <span className="text-primary font-bold">{data?.college || 'جامعة مؤتة'}</span>
+              </div>
+              <div className="flex justify-between font-label-sm">
+                <span className="text-on-surface-variant">التخصص:</span>
+                <span className="text-secondary font-bold">{data?.major || 'علم البيانات'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Nav Buttons for Academic Operations */}
+          <div className="pt-space-md grid grid-cols-2 gap-2 border-t border-surface-container-high/40">
+            <Link
+              className="bg-surface-container-high hover:bg-surface-variant text-on-surface p-2 rounded-lg text-center font-label-md transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              href="/grades"
+            >
+              <span className="material-symbols-outlined text-base">receipt_long</span>
+              كشف العلامات
+            </Link>
+            <Link
+              className="bg-surface-container-high hover:bg-surface-variant text-on-surface p-2 rounded-lg text-center font-label-md transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              href="/plan"
+            >
+              <span className="material-symbols-outlined text-base">alt_route</span>
+              شجرة الخطة
+            </Link>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

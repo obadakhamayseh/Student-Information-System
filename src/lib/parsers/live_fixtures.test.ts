@@ -22,6 +22,7 @@ describe('Live Fixtures Parity Tests', () => {
     expect(result.passedHours).toBe(86);
     expect(result.cumulativeGpa).toBe('80.73');
     expect(result.semesterGpa).toBe('72.70');
+    expect(result.lastSemesterName).toBe('الفصل الصيفي 2025/2026');
     expect(result.courses.length).toBe(6);
     expect(result.courses[0].courseNumber).toBe('2212351');
     expect(result.courses[0].courseName).toBe('أمن الحاسبات والشبكات');
@@ -89,6 +90,28 @@ describe('Live Fixtures Parity Tests', () => {
     expect(completed.length).toBeGreaterThan(25);
 
     const registered = result.courses.filter(c => c.status === 'مسجلة');
-    expect(registered.length).toBeGreaterThan(0);
+    expect(registered.length).toBe(6);
+    const registeredHours = registered.reduce((sum, c) => sum + c.creditHours, 0);
+    expect(registeredHours).toBe(16);
+
+    // التحقق من تصنيفات الخطة ومتطلباتها الحقيقية من البوابة
+    expect(result.categories.length).toBe(9);
+    const uniComp = result.categories.find(c => c.name === 'جامعه إجباري');
+    expect(uniComp?.completedHours).toBe(12);
+    expect(uniComp?.requiredHours).toBe(18);
+    expect(uniComp?.passedCoursesCount).toBe(4);
+    expect(uniComp?.totalCoursesCount).toBe(6);
+
+    const colComp = result.categories.find(c => c.name === 'كليه اجباري');
+    expect(colComp?.completedHours).toBe(21);
+    expect(colComp?.requiredHours).toBe(24);
+    expect(colComp?.passedCoursesCount).toBe(7);
+    expect(colComp?.totalCoursesCount).toBe(8);
+
+    const deptComp = result.categories.find(c => c.name.includes('إجباري') && c.name.includes('تخص'));
+    expect(deptComp?.completedHours).toBe(41);
+    expect(deptComp?.requiredHours).toBe(72);
+    expect(deptComp?.passedCoursesCount).toBe(17);
+    expect(deptComp?.totalCoursesCount).toBe(30);
   });
 });

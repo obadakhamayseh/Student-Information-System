@@ -17,6 +17,8 @@ export const PlanCategorySchema = z.object({
   name: z.string().default(''),
   requiredHours: z.number().default(0),
   completedHours: z.number().default(0),
+  passedCoursesCount: z.number().default(0),
+  totalCoursesCount: z.number().default(0),
   courses: z.array(PlanCourseSchema).default([]),
 });
 

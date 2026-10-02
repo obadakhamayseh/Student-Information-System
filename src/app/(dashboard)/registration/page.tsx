@@ -1,29 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Sparkles,
-  BookOpen,
-  Calendar,
-  Layers,
-  Clock,
-  User,
-  MapPin,
-  ExternalLink,
-  Trash2,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle2,
-  ArrowRight,
-  ShieldAlert,
-  PlusCircle,
-  Hash,
-  RotateCcw,
-  Info,
-  Plus,
-} from 'lucide-react';
 import type { RegMenuData, RegisteredCourseItem } from '@/lib/schemas/registration.schema';
 
 export default function RegistrationMenuPage() {
@@ -41,6 +20,9 @@ export default function RegistrationMenuPage() {
   const [addSection, setAddSection] = useState('');
   const [addingCourse, setAddingCourse] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // فلترة وبحث بالمواد المسجلة
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchRegMenu = async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -74,6 +56,53 @@ export default function RegistrationMenuPage() {
     fetchRegMenu();
   }, []);
 
+  // حساب ساعات المادة بدقة (مشروع تخرج 1 = 1 ساعة، 2 = 2 ساعة، المختبر = 1 ساعة، الباقي 3)
+  const getCourseHours = (courseNumber: string, courseName: string): number => {
+    if (
+      courseNumber === '2222491' ||
+      courseNumber.endsWith('491') ||
+      courseName.includes('مشروع تخرج 1') ||
+      courseName.includes('مشروع تخرج1')
+    ) {
+      return 1;
+    }
+    if (
+      courseNumber === '2222492' ||
+      courseNumber.endsWith('492') ||
+      courseName.includes('مشروع تخرج 2') ||
+      courseName.includes('مشروع تخرج2')
+    ) {
+      return 2;
+    }
+    if (courseName.includes('مختبر') || courseName.toLowerCase().includes('lab')) {
+      return 1;
+    }
+    return 3;
+  };
+
+  const registeredCourses = useMemo(() => data?.registeredCourses || [], [data]);
+
+  // إجمالي الساعات المسجلة
+  const totalRegisteredHours = useMemo(() => {
+    return registeredCourses.reduce(
+      (sum, c) => sum + getCourseHours(c.courseNumber, c.courseName),
+      0
+    );
+  }, [registeredCourses]);
+
+  // تصفية المواد المسجلة بالبحث
+  const filteredCourses = useMemo(() => {
+    if (!searchQuery.trim()) return registeredCourses;
+    const q = searchQuery.trim().toLowerCase();
+    return registeredCourses.filter(
+      (c) =>
+        c.courseName.toLowerCase().includes(q) ||
+        c.courseNumber.toLowerCase().includes(q) ||
+        c.room.toLowerCase().includes(q) ||
+        c.days.toLowerCase().includes(q)
+    );
+  }, [registeredCourses, searchQuery]);
+
   const handleDropConfirm = async () => {
     if (!dropTarget) return;
     setDropping(true);
@@ -99,7 +128,7 @@ export default function RegistrationMenuPage() {
 
       const resJson = await res.json();
       if (res.ok && resJson.success) {
-        setActionMessage({ type: 'success', text: resJson.message || 'تم سحب المادة بنجاح' });
+        setActionMessage({ type: 'success', text: resJson.message || 'تم سحب المادة بنجاح من جدولك' });
         setDropTarget(null);
         fetchRegMenu(true);
       } else {
@@ -126,7 +155,7 @@ export default function RegistrationMenuPage() {
     const sec = addSection.trim();
 
     if (!/^\d{7}$/.test(cNum)) {
-      setFormError('رقم المادة يجب أن يتكون من 7 أرقام (مثال: 0501101)');
+      setFormError('رقم المادة يجب أن يتكون من 7 أرقام (مثال: 0501101 أو 2212351)');
       return;
     }
 
@@ -169,7 +198,7 @@ export default function RegistrationMenuPage() {
       } else {
         setActionMessage({
           type: 'error',
-          text: resJson.message || 'تعذر إضافة المادة، يرجى التأكد من الشعبة ورقم المادة',
+          text: resJson.message || 'تعذر إضافة المادة، يرجى التأكد من الشعبة ورقم المادة وشروطها',
         });
       }
     } catch {
@@ -182,27 +211,43 @@ export default function RegistrationMenuPage() {
     }
   };
 
+  const getServiceIcon = (id: string, title: string) => {
+    if (id === 'registplan' || title.includes('الخطة')) return 'menu_book';
+    if (id === 'deferred' || title.includes('تأجيل')) return 'update';
+    if (id === 'trans' || title.includes('تحويل')) return 'swap_horiz';
+    if (id === 'outplan' || title.includes('خارج')) return 'post_add';
+    if (id === 'expansion' || title.includes('توسعة')) return 'open_in_full';
+    if (id === 'isvalid' || title.includes('بديل')) return 'fact_check';
+    return 'school';
+  };
+
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-        <div className="h-32 bg-slate-900/60 rounded-3xl border border-slate-800 animate-pulse" />
-        <div className="h-64 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse" />
+      <div className="flex flex-col w-full gap-space-lg animate-pulse">
+        <div className="h-32 bg-surface-container-low rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-surface-container-low rounded-xl" />
+          ))}
+        </div>
+        <div className="h-96 bg-surface-container-low rounded-xl" />
+        <div className="h-64 bg-surface-container-low rounded-xl" />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="max-w-xl mx-auto px-4 pt-16 text-center">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-300">
-          <AlertCircle className="w-10 h-10 mx-auto text-red-400 mb-3" />
-          <h2 className="text-lg font-bold text-white mb-2">تعذر عرض قائمة التسجيل</h2>
-          <p className="text-xs text-slate-300 mb-6">{error}</p>
+      <div className="max-w-xl mx-auto pt-16 text-center">
+        <div className="bg-error-container/20 border border-error/30 rounded-2xl p-6 text-on-surface">
+          <span className="material-symbols-outlined text-4xl text-error mb-3">error</span>
+          <h2 className="text-lg font-bold text-primary mb-2">تعذر عرض قائمة التسجيل</h2>
+          <p className="text-xs text-on-surface-variant mb-6">{error}</p>
           <button
             onClick={() => fetchRegMenu(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-xl transition-colors inline-flex items-center gap-2"
+            className="px-4 py-2 bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-2 cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="material-symbols-outlined text-base">refresh</span>
             <span>إعادة المحاولة</span>
           </button>
         </div>
@@ -211,193 +256,403 @@ export default function RegistrationMenuPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
-      {/* الترويسة الرئيسية */}
-      <div className="bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-blue-400 font-semibold mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>بوابة القبول والتسجيل • جامعة مؤتة</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              التسجيل الإلكتروني والخدمات الأكاديمية
-            </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              إدارة المواد المسجلة للفصل الحالي والوصول إلى خدمات التسجيل والخطط
-            </p>
+    <div className="flex flex-col w-full space-y-space-lg">
+      {/* 1. الترويسة الرئيسية - Banner مطابق لباقي الصفحات */}
+      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container-high/40">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-space-xs text-secondary font-label-md">
+            <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+            <span className="material-symbols-outlined text-sm">how_to_reg</span>
+            <span>بوابة القبول والتسجيل • جامعة مؤتة</span>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/registration/plan"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>التسجيل باستخدام الخطة</span>
-              <ArrowRight className="w-3.5 h-3.5 rotate-180" />
-            </Link>
-
-            <button
-              onClick={() => fetchRegMenu(true)}
-              disabled={refreshing}
-              title="تحديث البيانات"
-              className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
-            </button>
-          </div>
+          <h1 className="font-headline-xl text-headline-xl text-primary font-bold tracking-tight">
+            التسجيل الإلكتروني والخدمات الأكاديمية
+          </h1>
+          <p className="font-body-md text-body-md text-on-surface-variant flex items-center gap-2 flex-wrap">
+            <span className="material-symbols-outlined text-base">domain</span>
+            <span>{data?.college || 'كلية تكنولوجيا المعلومات'}</span>
+            <span>•</span>
+            <span className="material-symbols-outlined text-base">person</span>
+            <span>{data?.studentName || 'طالب جامعة مؤتة'}</span>
+            <span>•</span>
+            <span className="material-symbols-outlined text-base">calendar_month</span>
+            <span>الفصل الأول 2026/2027</span>
+          </p>
         </div>
-      </div>
 
-      {/* رسالة النجاح أو التنبيه */}
+        {/* أزرار الإجراءات والوصول السريع */}
+        <div className="flex flex-wrap items-center gap-space-sm">
+          <Link
+            href="/registration/plan"
+            className="bg-secondary hover:opacity-95 text-on-secondary px-space-md py-2.5 rounded-lg font-label-md font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg">menu_book</span>
+            <span>التسجيل بالخطة</span>
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+          </Link>
+
+          <Link
+            href="/registration/expansion"
+            className="bg-surface-container-low hover:bg-surface-container-high text-on-surface px-space-md py-2.5 rounded-lg font-label-md font-semibold flex items-center gap-1.5 border border-surface-container-high/50 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg text-primary">open_in_full</span>
+            <span className="hidden sm:inline">طلب توسعة شعبة</span>
+            <span className="sm:hidden">توسعة</span>
+          </Link>
+
+          <button
+            onClick={() => fetchRegMenu(true)}
+            disabled={refreshing}
+            title="تحديث البيانات"
+            className="bg-primary hover:bg-primary-container text-on-primary px-space-md py-2.5 rounded-lg font-label-lg flex items-center gap-space-xs transition-all shadow-sm active:scale-95 disabled:opacity-75 cursor-pointer"
+          >
+            <span className={`material-symbols-outlined text-lg ${refreshing ? 'animate-spin' : ''}`}>
+              refresh
+            </span>
+            <span className="hidden sm:inline">تحديث</span>
+          </button>
+        </div>
+      </section>
+
+      {/* 2. شريط المؤشرات والإحصائيات السريعة (4 Quick Bento Stat Cards) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-space-md">
+        {/* بطاقة 1: المواد المسجلة */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-primary"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">المواد المسجلة</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-lg">calendar_month</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-primary font-mono">
+              {registeredCourses.length}
+            </span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">مواد دراسية</span>
+          </div>
+          <span className="text-[11px] text-secondary font-label-sm font-semibold mt-1">
+            الفصل الحالي 2026/2027
+          </span>
+        </div>
+
+        {/* بطاقة 2: الساعات المسجلة */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-secondary"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">الساعات المسجلة</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+              <span className="material-symbols-outlined text-lg">schedule</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-secondary font-mono">
+              {totalRegisteredHours}
+            </span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">ساعة معتمدة</span>
+          </div>
+          <span className="text-[11px] text-on-surface-variant font-label-sm mt-1">
+            ساعات قيد الدراسة الفعلية
+          </span>
+        </div>
+
+        {/* بطاقة 3: حالة بوابة التسجيل */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-emerald-500"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">حالة التسجيل</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-emerald-600">
+              <span className="material-symbols-outlined text-lg">verified</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="font-headline-sm text-headline-sm font-bold text-on-surface">
+              متاح ونشط
+            </span>
+          </div>
+          <span className="text-[11px] text-on-surface-variant font-label-sm mt-1">
+            فترة السحب والإضافة الإلكترونية
+          </span>
+        </div>
+
+        {/* بطاقة 4: الخدمات الأكاديمية */}
+        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
+          <div className="absolute top-0 right-0 w-1.5 h-full bg-primary-container"></div>
+          <div className="flex items-center justify-between mb-space-sm">
+            <span className="font-label-md text-label-md text-on-surface-variant">الخدمات الإلكترونية</span>
+            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-lg">apps</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-headline-xl text-headline-xl font-bold text-primary font-mono">
+              {data?.services?.length || 6}
+            </span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">خدمة متاحة</span>
+          </div>
+          <span className="text-[11px] text-on-surface-variant font-label-sm mt-1">
+            معاملات وطلبات القبول والتسجيل
+          </span>
+        </div>
+      </section>
+
+      {/* 3. رسالة النجاح أو التنبيه عند تنفيذ عملية */}
       {actionMessage && (
         <div
-          className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-medium ${
+          className={`p-space-md rounded-xl border flex items-center justify-between font-label-md transition-all shadow-sm ${
             actionMessage.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-              : 'bg-red-500/10 border-red-500/30 text-red-300'
+              ? 'bg-secondary/10 border-secondary/30 text-secondary'
+              : 'bg-error-container/20 border-error/30 text-error'
           }`}
         >
           <div className="flex items-center gap-2">
-            {actionMessage.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-red-400" />
-            )}
-            <span>{actionMessage.text}</span>
+            <span className="material-symbols-outlined text-xl">
+              {actionMessage.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span className="font-bold">{actionMessage.text}</span>
           </div>
           <button
             onClick={() => setActionMessage(null)}
-            className="text-slate-400 hover:text-white text-xs px-2"
+            className="text-on-surface-variant hover:text-on-surface p-1 rounded-md transition-colors cursor-pointer"
           >
-            إغلاق
+            <span className="material-symbols-outlined text-base">close</span>
           </button>
         </div>
       )}
 
-      {/* جدول المواد المسجلة للفصل الحالي */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 sm:p-5 bg-slate-950/40 border-b border-slate-800/80 flex items-center justify-between">
+      {/* 4. جدول وبطاقات المواد المسجلة للفصل الحالي */}
+      <section className="bg-surface-container-lowest p-space-md sm:p-space-lg rounded-xl shadow-sm border border-surface-container-high/40">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-space-md border-b border-surface-container-high/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
-            </div>
+            <span className="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-xl">event_available</span>
+            </span>
             <div>
-              <h2 className="text-sm font-bold text-white">المواد المسجلة للفصل الحالي</h2>
-              <span className="text-[11px] text-slate-400">
-                إجمالي المواد: {data?.registeredCourses.length || 0} مواد
-              </span>
+              <div className="flex items-center gap-2">
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  المواد المسجلة للفصل الحالي
+                </h2>
+                <span className="text-xs font-label-sm bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full font-mono">
+                  {registeredCourses.length} مواد • {totalRegisteredHours} ساعة
+                </span>
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                قائمة المقررات المثبتة في جدولك الأكاديمي مع إمكانية السحب والإضافة
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => {
                 const el = document.getElementById('psub_number');
                 el?.focus();
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
-              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+              className="text-xs text-secondary hover:text-secondary-fixed font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/10 hover:bg-secondary/20 border border-secondary/20 transition-all cursor-pointer"
             >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>إضافة مادة</span>
+              <span className="material-symbols-outlined text-base">add_circle</span>
+              <span>إضافة مادة سريعة</span>
             </button>
             <Link
               href="/registration/plan"
-              className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-colors"
+              className="text-xs text-primary hover:text-primary font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-all"
             >
-              <BookOpen className="w-3.5 h-3.5" />
+              <span className="material-symbols-outlined text-base">menu_book</span>
               <span>التسجيل بالخطة</span>
-              <ArrowRight className="w-3 h-3 rotate-180" />
             </Link>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {data?.registeredCourses.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              لا توجد مواد مسجلة لهذا الفصل حتى الآن
+        {/* شريط البحث السريع بالمواد المسجلة */}
+        {registeredCourses.length > 0 && (
+          <div className="pt-space-md pb-space-sm flex items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-base">
+                search
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث باسم المادة، رقمها، القاعة..."
+                className="w-full bg-surface-container-low border border-surface-container-high/60 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg pr-9 pl-4 py-1.5 text-xs text-on-surface placeholder:text-on-surface-variant/60 outline-none transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-sm">cancel</span>
+                </button>
+              )}
+            </div>
+            <span className="font-label-sm text-xs text-on-surface-variant hidden sm:inline">
+              المعروض: {filteredCourses.length} من {registeredCourses.length}
+            </span>
+          </div>
+        )}
+
+        {/* عرض الهواتف: بطاقات عصرية للمواد المسجلة (sm:hidden) */}
+        <div className="block sm:hidden divide-y divide-surface-container-high/40 mt-space-sm">
+          {filteredCourses.length > 0 ? (
+            filteredCourses.map((course, idx) => {
+              const hours = getCourseHours(course.courseNumber, course.courseName);
+              return (
+                <div key={idx} className="p-3.5 bg-surface-container-low/40 rounded-xl my-2 flex flex-col gap-2.5 border border-surface-container-high/30">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-headline-sm text-sm font-bold text-on-surface truncate">
+                        {course.courseName}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="font-mono text-xs bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold" dir="ltr">
+                          {course.courseNumber}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+                          شعبة {course.section}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-secondary/10 text-secondary border border-secondary/20">
+                          {hours} س
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setDropTarget(course)}
+                      className="px-2.5 py-1.5 rounded-lg bg-error/10 hover:bg-error/20 text-error border border-error/20 text-xs font-bold transition-colors inline-flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                      <span>سحب</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-surface-container-high/40 text-on-surface-variant">
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-secondary">meeting_room</span>
+                      <span className="truncate">{course.room || 'غير محدد'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono">
+                      <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                      <span className="truncate" dir="ltr">{course.time || '—'}</span>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-1.5 text-xs text-on-surface">
+                      <span className="material-symbols-outlined text-sm text-on-surface-variant">calendar_view_week</span>
+                      <span>أيام المحاضرة: <strong>{course.days || 'غير محدد'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-10 text-on-surface-variant text-xs">
+              {searchQuery ? 'لا توجد نتائج مطابقة لبحثك' : 'لا توجد مواد مسجلة لهذا الفصل حتى الآن'}
+            </div>
+          )}
+        </div>
+
+        {/* عرض الشاشات الأكبر: جدول أنيق متجاوب (hidden sm:block) */}
+        <div className="hidden sm:block overflow-x-auto mt-space-sm">
+          {filteredCourses.length === 0 ? (
+            <div className="text-center py-12 text-on-surface-variant text-xs">
+              {searchQuery ? 'لا توجد نتائج مطابقة لبحثك' : 'لا توجد مواد مسجلة لهذا الفصل حتى الآن'}
             </div>
           ) : (
             <table className="w-full text-right text-xs">
               <thead>
-                <tr className="border-b border-slate-800/60 bg-slate-950/20 text-slate-400 text-[11px]">
-                  <th className="py-3 px-4 font-medium">رقم المادة</th>
-                  <th className="py-3 px-4 font-medium">اسم المادة</th>
-                  <th className="py-3 px-4 font-medium text-center">الشعبة</th>
-                  <th className="py-3 px-4 font-medium">القاعة</th>
-                  <th className="py-3 px-4 font-medium">الوقت</th>
-                  <th className="py-3 px-4 font-medium">الأيام</th>
-                  <th className="py-3 px-4 font-medium text-center">الإجراء</th>
+                <tr className="border-b border-surface-container-high/60 bg-surface-container-low/50 text-on-surface-variant text-[11px] font-bold">
+                  <th className="py-3 px-4 font-label-md">رقم المادة</th>
+                  <th className="py-3 px-4 font-label-md">اسم المادة</th>
+                  <th className="py-3 px-4 font-label-md text-center">الشعبة</th>
+                  <th className="py-3 px-4 font-label-md text-center">الساعات</th>
+                  <th className="py-3 px-4 font-label-md">القاعة</th>
+                  <th className="py-3 px-4 font-label-md">الوقت</th>
+                  <th className="py-3 px-4 font-label-md">الأيام</th>
+                  <th className="py-3 px-4 font-label-md text-center">الإجراء</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/40 text-slate-200">
-                {data?.registeredCourses.map((course, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono text-slate-400">{course.courseNumber}</td>
-                    <td className="py-3.5 px-4 font-medium text-white">{course.courseName}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                        {course.section}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-300">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>{course.room}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-300">
-                      <div className="flex items-center gap-1.5 font-mono">
-                        <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>{course.time}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-300">{course.days}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => setDropTarget(course)}
-                        className="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[11px] font-medium transition-colors inline-flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>سحب</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-surface-container-high/40 text-on-surface">
+                {filteredCourses.map((course, idx) => {
+                  const hours = getCourseHours(course.courseNumber, course.courseName);
+                  return (
+                    <tr key={idx} className="hover:bg-surface-container-low/50 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-primary" dir="ltr">
+                        {course.courseNumber}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-on-surface">
+                        {course.courseName}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+                          {course.section}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-secondary/10 text-secondary border border-secondary/20">
+                          {hours} س
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-on-surface-variant">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-secondary">meeting_room</span>
+                          <span>{course.room || '—'}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-on-surface-variant font-mono" dir="ltr">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                          <span>{course.time || '—'}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-on-surface font-medium">{course.days || '—'}</td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => setDropTarget(course)}
+                          className="px-3 py-1 rounded-lg bg-error/10 hover:bg-error/20 text-error border border-error/20 text-[11px] font-bold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span>سحب</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* بطاقة إضافة مادة جديدة مباشرة */}
-      <div id="add-course-card" className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
-        {/* ترويسة البطاقة */}
-        <div className="flex items-center gap-2.5 pb-4 border-b border-slate-800/80">
-          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm">
-            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+      {/* 5. بطاقة إضافة مادة جديدة مباشرة (Quick Add Form) */}
+      <section id="add-course-card" className="bg-surface-container-lowest p-space-md sm:p-space-lg rounded-xl shadow-sm border border-surface-container-high/40">
+        <div className="flex items-center gap-2.5 pb-space-md border-b border-surface-container-high/40">
+          <span className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center font-bold">
+            <span className="material-symbols-outlined text-lg">add_circle</span>
+          </span>
+          <div>
+            <h3 className="font-headline-md text-headline-md text-primary font-bold">
+              إضافة مادة جديدة مباشرة
+            </h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">
+              أدخل رقم المادة المكون من 7 أرقام ورقم الشعبة لتسجيلها مباشرة في جدولك الدراسي
+            </p>
           </div>
-          <h3 className="text-base font-bold text-white tracking-wide">
-            إضافة مادة جديدة
-          </h3>
         </div>
 
-        <form onSubmit={handleAddCourseSubmit} className="mt-5 space-y-5">
+        <form onSubmit={handleAddCourseSubmit} className="mt-space-md space-y-space-md">
           {formError && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>{formError}</span>
+            <div className="p-3 rounded-lg bg-error-container/20 border border-error/30 text-error text-xs flex items-center gap-2">
+              <span className="material-symbols-outlined text-base">error</span>
+              <span className="font-bold">{formError}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* رقم المادة */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+            {/* حقل رقم المادة */}
             <div className="space-y-1.5">
-              <label htmlFor="psub_number" className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Hash className="w-4 h-4 text-blue-400" />
-                <span>رقم المادة</span>
+              <label htmlFor="psub_number" className="block text-xs font-bold text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-primary">pin</span>
+                <span>رقم المادة (7 أرقام)</span>
               </label>
               <input
                 type="text"
@@ -410,21 +665,21 @@ export default function RegistrationMenuPage() {
                 }}
                 maxLength={7}
                 pattern="[0-9]{7}"
-                placeholder="أدخل 7 أرقام"
+                placeholder="أدخل 7 أرقام (مثال: 2212351)"
                 required
-                className="w-full bg-slate-950/60 border border-slate-700/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 font-mono outline-none transition-all"
+                className="w-full bg-surface-container-low border border-surface-container-high focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 font-mono outline-none transition-all"
               />
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>مثال: 0501101</span>
+              <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+                <span className="material-symbols-outlined text-xs">info</span>
+                <span>مثال لمواد التخصص: 2212351, 2222232, 2222441</span>
               </div>
             </div>
 
-            {/* رقم الشعبة */}
+            {/* حقل رقم الشعبة */}
             <div className="space-y-1.5">
-              <label htmlFor="psection" className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-blue-400" />
-                <span>رقم الشعبة</span>
+              <label htmlFor="psection" className="block text-xs font-bold text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-primary">layers</span>
+                <span>رقم الشعبة (1-2 أرقام)</span>
               </label>
               <input
                 type="text"
@@ -437,35 +692,33 @@ export default function RegistrationMenuPage() {
                 }}
                 maxLength={2}
                 pattern="[0-9]{1,2}"
-                placeholder="أدخل 1-2 أرقام"
+                placeholder="أدخل رقم الشعبة (مثال: 1)"
                 required
-                className="w-full bg-slate-950/60 border border-slate-700/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 font-mono outline-none transition-all"
+                className="w-full bg-surface-container-low border border-surface-container-high focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 font-mono outline-none transition-all"
               />
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>مثال: 1, 2, 10</span>
+              <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+                <span className="material-symbols-outlined text-xs">info</span>
+                <span>أرقام الشعب المتاحة عادة: 1, 2, 3, 10</span>
               </div>
             </div>
           </div>
 
-          {/* أزرار الإجراءات */}
+          {/* أزرار الإجراءات للنموذج */}
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={addingCourse}
-              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {addingCourse ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>جاري الإضافة...</span>
+                  <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+                  <span>جارٍ تسجيل المادة...</span>
                 </>
               ) : (
                 <>
-                  <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
-                    <Plus className="w-3 h-3 stroke-[3]" />
-                  </div>
-                  <span>إضافة مادة</span>
+                  <span className="material-symbols-outlined text-base">add</span>
+                  <span>إضافة المادة للجدول</span>
                 </>
               )}
             </button>
@@ -474,96 +727,110 @@ export default function RegistrationMenuPage() {
               type="button"
               onClick={handleResetAddForm}
               disabled={addingCourse}
-              className="px-5 py-2.5 rounded-xl bg-transparent hover:bg-slate-800/80 border-2 border-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-bold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 rounded-lg border border-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
+              <span className="material-symbols-outlined text-base">backspace</span>
               <span>مسح</span>
             </button>
           </div>
         </form>
-      </div>
+      </section>
 
-      {/* بطاقات الخدمات الأكاديمية */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Layers className="w-4 h-4 text-indigo-400" />
-          <span>خدمات القبول والتسجيل الإلكترونية</span>
-        </h2>
+      {/* 6. شبكة الخدمات الأكاديمية الإلكترونية (Academic Electronic Services Grid) */}
+      <section className="space-y-space-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-lg">widgets</span>
+            </span>
+            <div>
+              <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                خدمات القبول والتسجيل الإلكترونية
+              </h2>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                الوصول المباشر إلى المعاملات الأكاديمية، التأجيل، توسعة الشعب، وتغيير التخصص
+              </p>
+            </div>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-md">
           {data?.services.map((service) => {
             const isInternal = service.isInternal;
             const CardWrapper = isInternal ? Link : 'a';
             const extraProps = isInternal ? {} : { target: '_blank', rel: 'noopener noreferrer' };
+            const iconName = getServiceIcon(service.id, service.title);
 
             return (
               <CardWrapper
                 key={service.id}
                 href={service.href}
                 {...(extraProps as any)}
-                className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-blue-500/40 hover:bg-slate-800/40 transition-all flex flex-col justify-between group"
+                className="bg-surface-container-lowest border border-surface-container-high/40 rounded-xl p-space-md sm:p-space-lg hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <BookOpen className="w-4 h-4" />
+                    <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                      <span className="material-symbols-outlined text-xl">{iconName}</span>
                     </span>
                     {service.badge && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20">
                         {service.badge}
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors mb-1.5">
+                  <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface group-hover:text-primary transition-colors mb-1.5">
                     {service.title}
                   </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
                     {service.description}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-500 group-hover:text-blue-400 transition-colors">
-                  <span>{isInternal ? 'فتح الخدمة' : 'بوابة الجامعة'}</span>
-                  {isInternal ? (
-                    <ArrowRight className="w-3.5 h-3.5 rotate-180" />
-                  ) : (
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  )}
+                <div className="mt-4 pt-3 border-t border-surface-container-high/40 flex items-center justify-between text-xs text-on-surface-variant group-hover:text-primary transition-colors">
+                  <span className="font-label-md font-semibold">
+                    {isInternal ? 'فتح الخدمة' : 'بوابة الجامعة الرسمية'}
+                  </span>
+                  <span className="material-symbols-outlined text-base transition-transform group-hover:-translate-x-1">
+                    {isInternal ? 'arrow_back' : 'open_in_new'}
+                  </span>
                 </div>
               </CardWrapper>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* نافذة تأكيد سحب المادة (Modal) */}
+      {/* 7. نافذة تأكيد سحب المادة (Modal مطابق لنظام التصميم) */}
       {dropTarget && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto">
-              <ShieldAlert className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-surface-container-high rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto">
+              <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
 
             <div className="text-center space-y-1">
-              <h3 className="text-base font-bold text-white">تأكيد سحب المادة</h3>
-              <p className="text-xs text-slate-400">
-                هل أنت متأكد من رغبتك في سحب المادة التالية من جدولك للفصل الحالي؟
+              <h3 className="font-headline-sm text-headline-sm font-bold text-primary">
+                تأكيد سحب المادة
+              </h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                هل أنت متأكد من رغبتك في سحب المادة التالية من جدولك الأكاديمي للفصل الحالي؟
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-400">المادة:</span>
-                <span className="font-bold text-white">{dropTarget.courseName}</span>
+            <div className="p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high/60 text-xs space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">اسم المادة:</span>
+                <span className="font-bold text-on-surface">{dropTarget.courseName}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">الرقم:</span>
-                <span className="font-mono text-slate-300">{dropTarget.courseNumber}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">رقم المادة:</span>
+                <span className="font-mono font-bold text-primary" dir="ltr">{dropTarget.courseNumber}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">الشعبة:</span>
-                <span className="font-mono text-blue-400">شعبة {dropTarget.section}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">الشعبة:</span>
+                <span className="font-mono font-bold text-secondary">شعبة {dropTarget.section}</span>
               </div>
             </div>
 
@@ -571,22 +838,25 @@ export default function RegistrationMenuPage() {
               <button
                 onClick={handleDropConfirm}
                 disabled={dropping}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-lg bg-error hover:opacity-90 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
               >
                 {dropping ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span className="material-symbols-outlined text-base animate-spin">refresh</span>
                     <span>جارٍ السحب...</span>
                   </>
                 ) : (
-                  <span>نعم، اسحب المادة</span>
+                  <>
+                    <span className="material-symbols-outlined text-base">delete</span>
+                    <span>نعم، اسحب المادة</span>
+                  </>
                 )}
               </button>
 
               <button
                 onClick={() => setDropTarget(null)}
                 disabled={dropping}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors cursor-pointer border border-surface-container-high/60"
               >
                 إلغاء
               </button>

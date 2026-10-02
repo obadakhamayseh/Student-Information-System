@@ -49,6 +49,10 @@ export async function GET() {
     }
 
     const data = parseDashboardHtml(html, marksHtml);
+    if (data.studentName && data.studentName !== session.studentName) {
+      session.studentName = data.studentName;
+      await session.save();
+    }
     return NextResponse.json(data);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {

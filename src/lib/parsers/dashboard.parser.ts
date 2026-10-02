@@ -49,7 +49,8 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
   let studentName =
     findAttr('اسم الطالب', 'الاسم') ||
     clean($('.user-name').text()) ||
-    clean($('.user-profile').text());
+    clean($('.user-profile .user-name').text()) ||
+    clean($('.student-info-badge .info-item').first().text());
 
   if (studentName) {
     studentName = studentName.replace(/\d{10,14}/g, '').trim();
@@ -57,6 +58,7 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
 
   let studentId =
     findAttr('الرقم الجامعي', 'رقم الطالب') ||
+    clean($('.user-id span').text()) ||
     clean($('.user-id').text());
 
   if (!studentId) {
@@ -102,9 +104,11 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
   const advisor = findAttr('المرشد الأكاديمي', 'المرشد') || '—';
   let academicStatus = findAttr('الحالة الأكاديمية', 'حالة الطالب', 'الحالة') || clean($('.student-type-value').text()) || 'منتظم';
 
-  // 5. الساعات المسجلة والمجتازة
+  // 5. الساعات المسجلة والمجتازة والمدفوعة
   let registeredHours = parseInt(findAttr('الساعات المسجلة', 'المسجلة').replace(/\D/g, ''), 10) || 0;
   let passedHours = parseInt(findAttr('الساعات المقطوعة', 'الساعات المجتازة', 'المقطوعة', 'المجتازة').replace(/\D/g, ''), 10) || 0;
+  let paidHours = parseInt(findAttr('الساعات المدفوعة', 'المدفوعة').replace(/\D/g, ''), 10) || 0;
+  let financialBalance = findAttr('الرصيد المالي', 'الرصيد') || '';
 
   // إذا لم نجدها في الجداول، نبحث في .stat-card
   $('.stat-card').each((_, card) => {
@@ -114,22 +118,54 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
       registeredHours = parseInt(val.replace(/\D/g, ''), 10) || 0;
     } else if ((label.includes('النجاح') || label.includes('المجتازة')) && !passedHours) {
       passedHours = parseInt(val.replace(/\D/g, ''), 10) || 0;
+    } else if (label.includes('المدفوعة') && !paidHours) {
+      paidHours = parseInt(val.replace(/\D/g, ''), 10) || 0;
+    } else if (label.includes('الرصيد') && !financialBalance) {
+      financialBalance = val;
     }
   });
+
+  if (!financialBalance) {
+    financialBalance = '0.00 د.أ';
+  }
+
+  // خدمة العلم
+  const militaryStatus = clean($('.military-status').text()) || '';
+  let militaryExpireDate = '';
+  $('.military-item').each((_, item) => {
+    const l = clean($(item).find('.label').text());
+    if (l.includes('الإنتهاء') || l.includes('انتهاء')) {
+      militaryExpireDate = clean($(item).find('.value').text());
+    }
+  });
+
+  // ملاحظات القبول والشؤون المالية
+  const acceptanceNotesCount = parseInt(clean($('.notes-card-header.acceptance .notes-count').text()) || '0', 10) || 0;
+  const financialNotesCount = parseInt(clean($('.notes-card-header.financial .notes-count').text()) || '0', 10) || 0;
 
   // 6. المعدلات
   let cumulativeGpa = findAttr('المعدل التراكمي', 'التراكمي') || '0.00';
   let semesterGpa = findAttr('المعدل الفصلي', 'الفصلي') || '0.00';
+  let lastSemesterName = 'الفصل الصيفي 2025/2026';
 
-  if (marksHtml && (cumulativeGpa === '0.00' || semesterGpa === '0.00')) {
+  if (marksHtml) {
     const $m = cheerio.load(marksHtml);
     const lastSemHeader = $m('.semester-group').last().find('.semester-header');
     if (lastSemHeader.length > 0) {
+      const onclickAttr = lastSemHeader.attr('onclick') || '';
+      const matchYearSem = onclickAttr.match(/toggleSemester\(['"](\d{4})_(\d)['"]\)/);
+      if (matchYearSem) {
+        const y = parseInt(matchYearSem[1], 10);
+        const nextY = y + 1;
+        const semCode = matchYearSem[2];
+        const semName = semCode === '1' ? 'الفصل الأول' : semCode === '2' ? 'الفصل الثاني' : 'الفصل الصيفي';
+        lastSemesterName = `${semName} ${y}/${nextY}`;
+      }
       const statsText = clean(lastSemHeader.find('.semester-stats').text());
       const gpaMatch = statsText.match(/معدل:\s*([\d.]+)/);
       const cumMatch = statsText.match(/تراكمي:\s*([\d.]+)/);
-      if (gpaMatch && semesterGpa === '0.00') semesterGpa = gpaMatch[1];
-      if (cumMatch && cumulativeGpa === '0.00') cumulativeGpa = cumMatch[1];
+      if (gpaMatch && (semesterGpa === '0.00' || !semesterGpa)) semesterGpa = gpaMatch[1];
+      if (cumMatch && (cumulativeGpa === '0.00' || !cumulativeGpa)) cumulativeGpa = cumMatch[1];
     }
   }
 
@@ -165,11 +201,16 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
             const cDays = rowTexts[offset + 5] || '';
 
             if (cNumber && cName && !cName.includes('المجموع') && !cName.includes(':')) {
+              const isProj1 = cNumber === '2222491' || cNumber.endsWith('491') || cName.includes('مشروع تخرج 1') || cName.includes('مشروع تخرج1');
+              const isProj2 = cNumber === '2222492' || cNumber.endsWith('492') || cName.includes('مشروع تخرج 2') || cName.includes('مشروع تخرج2');
+              const isLab = cName.includes('مختبر') || cName.toLowerCase().includes('lab');
+              const crHours = isProj1 ? 1 : isProj2 ? 2 : isLab ? 1 : 3;
+
               courses.push({
                 courseNumber: cNumber,
                 courseName: cName,
                 section: cSection,
-                creditHours: 3,
+                creditHours: crHours,
                 days: cDays,
                 time: cTime,
                 room: cRoom,
@@ -194,10 +235,17 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
     academicStatus,
     cumulativeGpa,
     semesterGpa,
+    lastSemesterName,
     passedHours,
     registeredHours,
+    paidHours,
+    financialBalance,
     studyPlan: 'خطة 2024',
-    currentSemester: 'الفصل الحالي',
+    currentSemester: 'الفصل الأول 2026/2027',
+    militaryStatus,
+    militaryExpireDate,
+    acceptanceNotesCount,
+    financialNotesCount,
     courses,
     rawAttributes,
   };
