@@ -384,6 +384,12 @@ export default function DashboardPage() {
                       {course.days || '—'}
                     </span>
                   </div>
+                  {course.instructor && (
+                    <div className="flex items-center gap-1 text-[11px] text-primary/80 font-medium pt-0.5">
+                      <span className="material-symbols-outlined text-secondary text-xs">person</span>
+                      <span>{course.instructor}</span>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -395,10 +401,11 @@ export default function DashboardPage() {
 
           {/* Schedule Table (Desktop & Scrollable) */}
           <div className="hidden sm:block overflow-x-auto w-full mt-space-sm">
-            <table className="w-full min-w-[580px] text-right border-collapse">
+            <table className="w-full min-w-[640px] text-right border-collapse">
               <thead>
                 <tr className="bg-surface-container-low text-primary font-label-md">
                   <th className="py-3 px-space-md rounded-r-lg">المساق والرمز</th>
+                  <th className="py-3 px-space-md">مدرس المساق</th>
                   <th className="py-3 px-space-md">القاعة والمبنى</th>
                   <th className="py-3 px-space-md">التوقيت</th>
                   <th className="py-3 px-space-md">الأيام</th>
@@ -428,6 +435,16 @@ export default function DashboardPage() {
                       <td className="py-3.5 px-space-md">
                         <div className="flex items-center gap-1.5 text-on-surface">
                           <span className="material-symbols-outlined text-secondary text-base">
+                            person
+                          </span>
+                          <span className="font-medium text-primary text-xs">
+                            {course.instructor || 'هيئة تدريس'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-space-md">
+                        <div className="flex items-center gap-1.5 text-on-surface">
+                          <span className="material-symbols-outlined text-secondary text-base">
                             location_on
                           </span>
                           <span>{course.room || 'تُحدد لاحقاً'}</span>
@@ -448,7 +465,7 @@ export default function DashboardPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-on-surface-variant">
+                    <td colSpan={6} className="py-8 text-center text-on-surface-variant">
                       لا توجد مواد مسجلة حالياً في جدول الفصل.
                     </td>
                   </tr>
@@ -535,145 +552,6 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-          </div>
-        </section>
-      </div>
-
-      {/* Lower Section: Mutah University Calendar & Official Announcements */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
-        {/* Announcements & Calendar (8 cols) */}
-        <section className="lg:col-span-8 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col border border-surface-container-high/40">
-          <div className="flex items-center justify-between pb-space-md border-b border-surface-container-high/40">
-            <div className="flex items-center gap-space-sm">
-              <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined">campaign</span>
-              </div>
-              <div>
-                <h3 className="font-headline-md text-headline-md text-primary font-bold">
-                  إعلانات التقويم الأكاديمي لجامعة مؤتة
-                </h3>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  القرارات الرسمية الصادرة عن عمادة القبول والتسجيل
-                </span>
-              </div>
-            </div>
-            <span className="font-label-sm text-label-sm bg-surface-container-high text-primary px-2.5 py-1 rounded font-bold">
-              {data?.currentSemester || 'الفصل الحالي'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md mt-space-sm">
-            {/* Notice 1 */}
-            <div className="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between group hover:bg-surface-container-high transition-colors border border-surface-container-high/40">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="bg-primary text-on-primary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold">
-                    الامتحانات الجامعية
-                  </span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">معتمد</span>
-                </div>
-                <h4 className="font-headline-sm text-headline-sm font-bold text-primary">
-                  جدول ومواعيد الامتحانات
-                </h4>
-                <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
-                  تعلن عمادة القبول والتسجيل عن نشر مواعيد وقاعات الامتحانات الرسمية على البوابة الإلكترونية.
-                </p>
-              </div>
-              <div className="pt-space-md flex items-center justify-between">
-                <Link
-                  href="/schedule"
-                  className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-xs">calendar_month</span>
-                  عرض برنامج الامتحانات
-                </Link>
-                <span className="material-symbols-outlined text-on-surface-variant group-hover:-translate-x-1 transition-transform">
-                  chevron_left
-                </span>
-              </div>
-            </div>
-
-            {/* Notice 2 */}
-            <div className="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between group hover:bg-surface-container-high transition-colors border border-surface-container-high/40">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="bg-secondary text-on-secondary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold">
-                    الخطة والتسجيل
-                  </span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">إرشاد أكاديمي</span>
-                </div>
-                <h4 className="font-headline-sm text-headline-sm font-bold text-primary">
-                  الخطة الدراسية وتدقيق المواد
-                </h4>
-                <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
-                  يرجى مراجعة المواد المتبقية من الخطة الشجرية والتأكد من استيفاء المتطلبات السابقة للفصول القادمة.
-                </p>
-              </div>
-              <div className="pt-space-md flex items-center justify-between">
-                <Link
-                  href="/plan"
-                  className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-xs">account_tree</span>
-                  استعراض الخطة والشجرة
-                </Link>
-                <span className="material-symbols-outlined text-on-surface-variant group-hover:-translate-x-1 transition-transform">
-                  chevron_left
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Campus & University Identity Panel (4 cols) */}
-        <section className="lg:col-span-4 bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between border border-surface-container-high/40">
-          <div className="flex flex-col gap-space-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-label-lg text-label-lg font-bold text-primary">
-                محيط الحرم الجامعي
-              </span>
-              <span className="font-label-sm text-label-sm text-on-surface-variant">الكرك - مؤتة</span>
-            </div>
-            <div className="relative w-full h-36 rounded-lg overflow-hidden shadow-inner bg-primary-container">
-              <img
-                className="w-full h-full object-cover"
-                alt="جامعة مؤتة"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJmVuZIpj5Y1k7cptcn6e2bnLlwDLFhNAcNuMhRcpQmUlBzMP2H9u6yDa-CwwOUZnYAMwH-uGo7XzZY5H_Blnx-Obh8YJXI2lC83_oc0fERaYO5jbiNHb7SEjqEEgAfWG61-8gvcep9CIH6qkufQ0ugdJW8gGyGkKXufKbnzQTEmEo0pwIffx4Mx1EPxUiIQH7FRbwIuXCIKHTYg172fjnDsZlRrZkb2EirtjSA7RpBWf8jJD5wzS1AQ"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent flex items-end p-space-sm">
-                <span className="text-on-primary font-label-md font-semibold">
-                  جامعة مؤتة • شعلة المعرفة والكرامة
-                </span>
-              </div>
-            </div>
-            <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1 text-xs text-on-surface border border-surface-container-high/40">
-              <div className="flex justify-between font-label-sm">
-                <span className="text-on-surface-variant">الكلية:</span>
-                <span className="text-primary font-bold">{data?.college || 'جامعة مؤتة'}</span>
-              </div>
-              <div className="flex justify-between font-label-sm">
-                <span className="text-on-surface-variant">التخصص:</span>
-                <span className="text-secondary font-bold">{data?.major || 'علم البيانات'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Nav Buttons for Academic Operations */}
-          <div className="pt-space-md grid grid-cols-2 gap-2 border-t border-surface-container-high/40">
-            <Link
-              className="bg-surface-container-high hover:bg-surface-variant text-on-surface p-2 rounded-lg text-center font-label-md transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              href="/grades"
-            >
-              <span className="material-symbols-outlined text-base">receipt_long</span>
-              كشف العلامات
-            </Link>
-            <Link
-              className="bg-surface-container-high hover:bg-surface-variant text-on-surface p-2 rounded-lg text-center font-label-md transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              href="/plan"
-            >
-              <span className="material-symbols-outlined text-base">alt_route</span>
-              شجرة الخطة
-            </Link>
           </div>
         </section>
       </div>

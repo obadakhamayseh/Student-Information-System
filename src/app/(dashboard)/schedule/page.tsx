@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ScheduleData, ExamItem } from '@/lib/schemas/schedule.schema';
+import type { ScheduleData } from '@/lib/schemas/schedule.schema';
 import type { CourseItem } from '@/lib/schemas/student.schema';
 
 export default function SchedulePage() {
@@ -13,7 +13,6 @@ export default function SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showExportModal, setShowExportModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'exams'>('schedule');
 
   const fetchSchedule = async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -51,7 +50,6 @@ export default function SchedulePage() {
   }, []);
 
   const scheduleList: CourseItem[] = useMemo(() => data?.weeklySchedule || [], [data]);
-  const examsList: ExamItem[] = useMemo(() => data?.exams || [], [data]);
 
   const courseCount = scheduleList.length;
   const totalCreditHours =
@@ -69,7 +67,7 @@ export default function SchedulePage() {
 
     const icsEvents = scheduleList.map((c) => `BEGIN:VEVENT
 SUMMARY:${c.courseName} (${c.courseNumber})
-DESCRIPTION:شعبة ${c.section || '1'} - ${c.days || 'أيام المحاضرة'} - ${c.time || ''}
+DESCRIPTION:شعبة ${c.section || '1'} - مدرس المساق: ${c.instructor || 'هيئة التدريس'} - ${c.days || 'أيام المحاضرة'} - ${c.time || ''}
 LOCATION:جامعة مؤتة - ${c.room || 'الحرم الجامعي'}
 STATUS:CONFIRMED
 END:VEVENT`).join('\n');
@@ -185,7 +183,7 @@ END:VCALENDAR`;
         </div>
 
         {/* Quick Stats Bento Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-space-sm mt-space-lg pt-space-md bg-surface-container-lowest/5 rounded-lg p-space-sm border border-surface-container-lowest/10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm mt-space-lg pt-space-md bg-surface-container-lowest/5 rounded-lg p-space-sm border border-surface-container-lowest/10">
           <div className="flex items-center gap-space-sm p-space-xs">
             <div className="w-10 h-10 rounded-lg bg-surface-container-lowest/10 flex items-center justify-center text-secondary-fixed">
               <span className="material-symbols-outlined text-xl">menu_book</span>
@@ -219,81 +217,53 @@ END:VCALENDAR`;
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-space-sm p-space-xs">
-            <div className="w-10 h-10 rounded-lg bg-surface-container-lowest/10 flex items-center justify-center text-tertiary-fixed-dim">
-              <span className="material-symbols-outlined text-xl">event</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-label-sm text-label-sm text-on-primary-container">برنامج الامتحانات</span>
-              <span className="font-headline-sm text-headline-sm font-bold text-on-primary">
-                {examsList.length} امتحانات مرصودة
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Navigation Tabs (Schedule vs Exams) */}
+      {/* View Switcher Controls */}
       <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-space-md border border-surface-container-high/40">
-        <div className="flex items-center gap-1 bg-surface-container p-1 rounded-lg w-full sm:w-auto">
-          <button
-            onClick={() => setActiveTab('schedule')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-space-xs px-space-md py-1.5 rounded-lg font-label-lg text-label-lg transition-all cursor-pointer ${
-              activeTab === 'schedule'
-                ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
+        <div className="flex items-center gap-2">
+          <span className="w-8 h-8 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
             <span className="material-symbols-outlined text-lg">calendar_month</span>
-            <span>الجدول الأسبوعي</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('exams')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-space-xs px-space-md py-1.5 rounded-lg font-label-lg text-label-lg transition-all cursor-pointer ${
-              activeTab === 'exams'
-                ? 'bg-surface-container-lowest text-primary shadow-sm font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-lg">fact_check</span>
-            <span>برنامج الامتحانات ({examsList.length})</span>
-          </button>
+          </span>
+          <div>
+            <h2 className="font-headline-sm text-sm sm:text-base font-bold text-primary">
+              الجدول الأكاديمي المعتمد
+            </h2>
+            <span className="text-xs text-on-surface-variant font-label-sm">
+              {courseCount} مساقات مسجلة • {totalCreditHours} ساعة معتمدة
+            </span>
+          </div>
         </div>
 
-        {/* View Switcher (Only in Schedule Tab) */}
-        {activeTab === 'schedule' && (
-          <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-surface-container-high/40">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-label-md transition-all cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm">grid_view</span>
-              <span>الشبكة الأسبوعية</span>
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-label-md transition-all cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm">format_list_bulleted</span>
-              <span>القائمة التفصيلية</span>
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-surface-container-high/40">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-label-md transition-all cursor-pointer ${
+              viewMode === 'grid'
+                ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">grid_view</span>
+            <span>الشبكة الأسبوعية</span>
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-label-md transition-all cursor-pointer ${
+              viewMode === 'list'
+                ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">format_list_bulleted</span>
+            <span>القائمة التفصيلية</span>
+          </button>
+        </div>
       </div>
 
-      {/* TAB 1: Weekly Schedule */}
-      {activeTab === 'schedule' && (
-        <>
-          {/* VIEW 1: Grid Timetable View */}
-          {viewMode === 'grid' && (
+      {/* VIEW 1: Grid Timetable View */}
+      {viewMode === 'grid' && (
             <div className="flex flex-col bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-surface-container-high/40">
               <div className="overflow-x-auto">
                 <div className="min-w-[920px]">
@@ -375,6 +345,12 @@ END:VCALENDAR`;
                                     <span className="material-symbols-outlined text-[12px]">location_on</span>
                                     {c.room || '—'}
                                   </span>
+                                  {c.instructor && (
+                                    <span className="flex items-center gap-1 text-[10px] text-primary font-medium truncate pt-0.5">
+                                      <span className="material-symbols-outlined text-[12px] text-secondary">person</span>
+                                      <span className="truncate">{c.instructor}</span>
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             ))
@@ -421,8 +397,9 @@ END:VCALENDAR`;
                         <h3 className="font-headline-md text-headline-md text-primary mt-1">
                           {c.courseName}
                         </h3>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-                          {c.instructor || 'هيئة التدريس • جامعة مؤتة'}
+                        <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="material-symbols-outlined text-sm text-secondary">person</span>
+                          <span className="font-medium text-primary">{c.instructor || 'هيئة التدريس • جامعة مؤتة'}</span>
                         </p>
                       </div>
                     </div>
@@ -451,229 +428,6 @@ END:VCALENDAR`;
               )}
             </div>
           )}
-        </>
-      )}
-
-      {/* TAB 2: Official Exams Schedule */}
-      {activeTab === 'exams' && (
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-surface-container-high/40">
-          <div className="p-space-lg border-b border-surface-container-high/40 bg-surface-container-low/40 flex items-center justify-between">
-            <div className="flex items-center gap-space-xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-              <h3 className="font-headline-sm text-headline-sm text-primary">
-                برنامج الامتحانات الرسمية المعتمدة
-              </h3>
-            </div>
-            <span className="text-xs font-label-sm bg-surface-container-high text-primary px-2.5 py-1 rounded font-bold">
-              {examsList.length} امتحانات مجدولة
-            </span>
-          </div>
-
-          {/* Mobile View: Exam Cards (sm:hidden) */}
-          <div className="block sm:hidden divide-y divide-surface-container-high/50">
-            {examsList.length > 0 ? (
-              examsList.map((exam, i) => (
-                <div key={i} className="p-3 bg-surface-container-lowest flex flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-bold text-on-surface text-sm">{exam.courseName}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="bg-surface-container-high px-1.5 py-0.5 rounded text-[11px] font-mono text-primary font-bold" dir="ltr">
-                          {exam.courseNumber}
-                        </span>
-                        <span className="text-xs text-on-surface-variant">
-                          شعبة {exam.section || '1'}
-                        </span>
-                      </div>
-                    </div>
-                    {exam.seatNumber && (
-                      <span className="bg-surface-container-high text-primary font-bold px-2 py-0.5 rounded text-xs">
-                        مقعد {exam.seatNumber}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-1 text-xs pt-1 border-t border-surface-container-high/30">
-                    <div className="flex items-center gap-1 text-secondary font-semibold">
-                      <span className="material-symbols-outlined text-xs">event</span>
-                      <span>{exam.examDay} {exam.examDate}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-on-surface font-mono" dir="ltr">
-                      <span className="material-symbols-outlined text-xs">schedule</span>
-                      <span>{exam.examTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-primary font-medium col-span-2">
-                      <span className="material-symbols-outlined text-xs">location_on</span>
-                      <span>{exam.room}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-6 text-center text-sm text-on-surface-variant">
-                لم يتم الإعلان عن برنامج الامتحانات بعد لهذا الفصل.
-              </div>
-            )}
-          </div>
-
-          {/* Desktop / Tablet View: Full Table (hidden sm:block) */}
-          <div className="hidden sm:block overflow-x-auto w-full">
-            <table className="w-full min-w-[640px] text-right border-collapse">
-              <thead>
-                <tr className="bg-surface-container text-on-surface font-label-lg text-label-lg">
-                  <th className="py-3 px-space-md">رمز المساق</th>
-                  <th className="py-3 px-space-md">اسم المادة</th>
-                  <th className="py-3 px-space-md text-center">الشعبة</th>
-                  <th className="py-3 px-space-md">اليوم والتاريخ</th>
-                  <th className="py-3 px-space-md">الوقت</th>
-                  <th className="py-3 px-space-md">القاعة والموقع</th>
-                  <th className="py-3 px-space-md text-center">رقم الجلوس</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-container-high/40 text-sm font-body-md">
-                {examsList.length > 0 ? (
-                  examsList.map((exam, i) => (
-                    <tr key={i} className="hover:bg-surface-container-low/60 transition-colors">
-                      <td className="py-3.5 px-space-md font-mono font-bold text-primary" dir="ltr">
-                        {exam.courseNumber}
-                      </td>
-                      <td className="py-3.5 px-space-md font-bold text-on-surface">{exam.courseName}</td>
-                      <td className="py-3.5 px-space-md text-center">{exam.section || '1'}</td>
-                      <td className="py-3.5 px-space-md text-secondary font-semibold">
-                        {exam.examDay} {exam.examDate}
-                      </td>
-                      <td className="py-3.5 px-space-md font-mono" dir="ltr">{exam.examTime}</td>
-                      <td className="py-3.5 px-space-md font-semibold text-primary">{exam.room}</td>
-                      <td className="py-3.5 px-space-md text-center">
-                        <span className="bg-surface-container-high px-2 py-0.5 rounded text-xs font-mono">
-                          {exam.seatNumber || '—'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-on-surface-variant">
-                      لم يتم الإعلان عن برنامج الامتحانات بعد لهذا الفصل.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom 3 Information Cards matching Stitch Page2.html */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-space-lg mb-space-lg">
-        {/* Card 1: Campus Locations */}
-        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between border border-surface-container-high/40">
-          <div>
-            <div className="flex items-center justify-between mb-space-sm">
-              <h3 className="font-headline-sm text-headline-sm text-primary flex items-center gap-space-xs">
-                <span className="material-symbols-outlined text-secondary">domain</span>
-                مجمعات وقاعات المحاضرات
-              </h3>
-              <span className="font-label-sm text-label-sm bg-surface-container-high text-primary px-2 py-0.5 rounded font-bold">
-                الحرم الجامعي
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-md">
-              تتوزع قاعات ومختبرات المساقات في مباني جامعة مؤتة حسب كليات التخصص.
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-                <span className="font-label-md text-label-md text-on-surface font-semibold">مجمع تكنولوجيا المعلومات</span>
-                <span className="font-label-sm text-label-sm bg-surface-container text-primary px-2 py-0.5 rounded">مختبرات الحاسوب 1-4</span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-                <span className="font-label-md text-label-md text-on-surface font-semibold">مبنى الخوارزمي</span>
-                <span className="font-label-sm text-label-sm bg-surface-container text-primary px-2 py-0.5 rounded">قاعة G-12 (الطابق الأرضي)</span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-                <span className="font-label-md text-label-md text-on-surface font-semibold">كلية العلوم</span>
-                <span className="font-label-sm text-label-sm bg-surface-container text-primary px-2 py-0.5 rounded">مدرج S-101</span>
-              </div>
-            </div>
-          </div>
-          <div className="pt-space-md mt-space-sm flex items-center justify-between text-secondary">
-            <span className="font-label-sm text-label-sm font-bold flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">navigation</span>
-              جامعة مؤتة • الكرك
-            </span>
-            <span className="material-symbols-outlined text-sm">arrow_back</span>
-          </div>
-        </div>
-
-        {/* Card 2: Attendance & Regulations */}
-        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between border border-surface-container-high/40">
-          <div>
-            <div className="flex items-center justify-between mb-space-sm">
-              <h3 className="font-headline-sm text-headline-sm text-primary flex items-center gap-space-xs">
-                <span className="material-symbols-outlined text-error">notification_important</span>
-                تعليمات الحضور والغياب الرسمية
-              </h3>
-              <span className="font-label-sm text-label-sm bg-error-container text-on-error-container px-2 py-0.5 rounded-full font-bold">
-                15% حد الغياب
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-md">
-              تعتمد جامعة مؤتة نظام الرصد الإلكتروني الفوري للحضور، والغياب لأكثر من 15% دون عذر مرضي رسمي يترتب عليه الحرمان من الامتحان النهائي.
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-space-sm p-2 rounded-lg bg-surface-container-high/40">
-                <span className="material-symbols-outlined text-secondary text-base">check_circle</span>
-                <span className="font-body-sm text-body-sm text-on-surface">مساقات (ح/ث/خ): يسمح بحد أقصى 6 غيابات بدون عذر</span>
-              </div>
-              <div className="flex items-center gap-space-sm p-2 rounded-lg bg-surface-container-high/40">
-                <span className="material-symbols-outlined text-secondary text-base">check_circle</span>
-                <span className="font-body-sm text-body-sm text-on-surface">مساقات (ن/ر): يسمح بحد أقصى 4 غيابات بدون عذر</span>
-              </div>
-            </div>
-          </div>
-          <div className="pt-space-md mt-space-sm flex items-center justify-between text-on-surface-variant">
-            <span className="font-label-sm text-label-sm">الرصد مستمر إلكترونياً</span>
-            <span className="font-label-sm text-label-sm text-secondary font-bold">سجل الحضور الأكاديمي</span>
-          </div>
-        </div>
-
-        {/* Card 3: Sync & Timeline */}
-        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between border border-surface-container-high/40">
-          <div>
-            <div className="flex items-center justify-between mb-space-sm">
-              <h3 className="font-headline-sm text-headline-sm text-primary flex items-center gap-space-xs">
-                <span className="material-symbols-outlined text-secondary">sync_saved_locally</span>
-                المزامنة وتثبيت المواد
-              </h3>
-              <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                بيانات آنية (Realtime)
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">
-              الجدول المعروض مستخرج مباشرة من بوابة التسجيل (<span dir="ltr">app.mutah.edu.jo</span>) ومتوافق مع جدول الامتحانات النصفية والنهائية الموحد.
-            </p>
-            <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-label-sm text-label-sm text-on-surface-variant">التقدم في الفصل الدراسي</span>
-                <span className="font-label-sm text-label-sm font-bold text-primary">الفصل الثاني</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
-                <div className="h-full bg-secondary rounded-full" style={{ width: '45%' }}></div>
-              </div>
-              <span className="font-label-sm text-label-sm text-on-surface-variant text-right">
-                تم تثبيت الشعب والمساقات في السجل الأكاديمي
-              </span>
-            </div>
-          </div>
-          <div className="pt-space-md mt-space-sm flex items-center justify-between">
-            <span className="font-label-sm text-label-sm text-on-surface-variant">تحديث فوري عبر BFF</span>
-            <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">verified</span>
-              معتمد رسمياً
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Export Modal matching Page2.html */}
       {showExportModal && (

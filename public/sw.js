@@ -1,5 +1,5 @@
 // Service Worker for Mutah Student Information System (Mutah SIS PWA)
-const CACHE_NAME = 'mutah-sis-cache-v1';
+const CACHE_NAME = 'mutah-sis-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -37,6 +37,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // تجاهل أي بروتوكول غير http/https (مثل إضافات متصفح كروم chrome-extension)
+  if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) {
+    return;
+  }
+
   const url = new URL(event.request.url);
 
   // لا نقوم بتخزين استدعاءات API أو طلبات POST لمنع أي تداخل مع بيانات الطالب الحساسة

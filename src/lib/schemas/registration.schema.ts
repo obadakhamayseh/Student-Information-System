@@ -7,6 +7,9 @@ export const RegisteredCourseItemSchema = z.object({
   room: z.string().default(''),
   time: z.string().default(''),
   days: z.string().default(''),
+  instructor: z.string().optional().default(''),
+  capacity: z.number().optional().default(0),
+  enrolled: z.number().optional().default(0),
   dropUrl: z.string().optional().default(''),
 });
 

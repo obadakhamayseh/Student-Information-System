@@ -24,6 +24,54 @@ export default function RegistrationMenuPage() {
   // فلترة وبحث بالمواد المسجلة
   const [searchQuery, setSearchQuery] = useState('');
 
+  // استعلام فوري من جريدة المواد الرسمية (subp.mutah.edu.jo)
+  const [subpPreview, setSubpPreview] = useState<{
+    courseName?: string;
+    sections: Array<{
+      section: string;
+      instructor: string;
+      room: string;
+      timeFrom: string;
+      timeTo: string;
+      days: string;
+      capacity: number;
+      enrolled: number;
+      availableSeats: number;
+      isFull: boolean;
+    }>;
+    loading: boolean;
+  }>({ sections: [], loading: false });
+
+  // جلب بيانات الشعب والأساتذة والقاعات تلقائياً عند كتابة 7 أرقام
+  useEffect(() => {
+    if (addCourseNumber.length === 7) {
+      let isMounted = true;
+      setSubpPreview({ sections: [], loading: true });
+      fetch(`/api/subp/search?courseId=${addCourseNumber}`)
+        .then((res) => res.json())
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.success && res.sections && res.sections.length > 0) {
+            setSubpPreview({
+              courseName: res.sections[0]?.courseName,
+              sections: res.sections,
+              loading: false,
+            });
+          } else {
+            setSubpPreview({ sections: [], loading: false });
+          }
+        })
+        .catch(() => {
+          if (isMounted) setSubpPreview({ sections: [], loading: false });
+        });
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      setSubpPreview({ sections: [], loading: false });
+    }
+  }, [addCourseNumber]);
+
   const fetchRegMenu = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setLoading(true);
@@ -144,6 +192,7 @@ export default function RegistrationMenuPage() {
   const handleResetAddForm = () => {
     setAddCourseNumber('');
     setAddSection('');
+    setSubpPreview({ sections: [], loading: false });
     setFormError(null);
   };
 
@@ -211,22 +260,12 @@ export default function RegistrationMenuPage() {
     }
   };
 
-  const getServiceIcon = (id: string, title: string) => {
-    if (id === 'registplan' || title.includes('الخطة')) return 'menu_book';
-    if (id === 'deferred' || title.includes('تأجيل')) return 'update';
-    if (id === 'trans' || title.includes('تحويل')) return 'swap_horiz';
-    if (id === 'outplan' || title.includes('خارج')) return 'post_add';
-    if (id === 'expansion' || title.includes('توسعة')) return 'open_in_full';
-    if (id === 'isvalid' || title.includes('بديل')) return 'fact_check';
-    return 'school';
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col w-full gap-space-lg animate-pulse">
         <div className="h-32 bg-surface-container-low rounded-xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-28 bg-surface-container-low rounded-xl" />
           ))}
         </div>
@@ -314,8 +353,8 @@ export default function RegistrationMenuPage() {
         </div>
       </section>
 
-      {/* 2. شريط المؤشرات والإحصائيات السريعة (4 Quick Bento Stat Cards) */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-space-md">
+      {/* 2. شريط المؤشرات والإحصائيات السريعة (3 Quick Bento Stat Cards) */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-space-md">
         {/* بطاقة 1: المواد المسجلة */}
         <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
           <div className="absolute top-0 right-0 w-1.5 h-full bg-primary"></div>
@@ -376,25 +415,7 @@ export default function RegistrationMenuPage() {
           </span>
         </div>
 
-        {/* بطاقة 4: الخدمات الأكاديمية */}
-        <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow border border-surface-container-high/40">
-          <div className="absolute top-0 right-0 w-1.5 h-full bg-primary-container"></div>
-          <div className="flex items-center justify-between mb-space-sm">
-            <span className="font-label-md text-label-md text-on-surface-variant">الخدمات الإلكترونية</span>
-            <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-lg">apps</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-headline-xl font-bold text-primary font-mono">
-              {data?.services?.length || 6}
-            </span>
-            <span className="font-body-sm text-body-sm text-on-surface-variant">خدمة متاحة</span>
-          </div>
-          <span className="text-[11px] text-on-surface-variant font-label-sm mt-1">
-            معاملات وطلبات القبول والتسجيل
-          </span>
-        </div>
+
       </section>
 
       {/* 3. رسالة النجاح أو التنبيه عند تنفيذ عملية */}
@@ -540,6 +561,19 @@ export default function RegistrationMenuPage() {
                       <span className="material-symbols-outlined text-sm text-on-surface-variant">calendar_view_week</span>
                       <span>أيام المحاضرة: <strong>{course.days || 'غير محدد'}</strong></span>
                     </div>
+                    {course.instructor && (
+                      <div className="col-span-2 flex items-center justify-between text-xs text-primary font-medium pt-1 border-t border-surface-container-high/30">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-secondary">person</span>
+                          <span>مدرس المساق: <strong>{course.instructor}</strong></span>
+                        </div>
+                        {course.capacity ? (
+                          <span className="text-[10px] text-on-surface-variant font-mono bg-surface-container px-1.5 py-0.5 rounded" dir="ltr">
+                            {course.enrolled}/{course.capacity} مقعد
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -563,6 +597,7 @@ export default function RegistrationMenuPage() {
                 <tr className="border-b border-surface-container-high/60 bg-surface-container-low/50 text-on-surface-variant text-[11px] font-bold">
                   <th className="py-3 px-4 font-label-md">رقم المادة</th>
                   <th className="py-3 px-4 font-label-md">اسم المادة</th>
+                  <th className="py-3 px-4 font-label-md">مدرس المساق</th>
                   <th className="py-3 px-4 font-label-md text-center">الشعبة</th>
                   <th className="py-3 px-4 font-label-md text-center">الساعات</th>
                   <th className="py-3 px-4 font-label-md">القاعة</th>
@@ -581,6 +616,19 @@ export default function RegistrationMenuPage() {
                       </td>
                       <td className="py-3.5 px-4 font-bold text-on-surface">
                         {course.courseName}
+                      </td>
+                      <td className="py-3.5 px-4 text-on-surface">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-secondary">person</span>
+                            <span className="font-medium text-primary">{course.instructor || 'هيئة تدريس'}</span>
+                          </div>
+                          {course.capacity ? (
+                            <span className="text-[10px] text-on-surface-variant font-mono mt-0.5" dir="ltr">
+                              {course.enrolled} / {course.capacity} مسجل
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">
@@ -703,6 +751,66 @@ export default function RegistrationMenuPage() {
             </div>
           </div>
 
+          {/* معاينة الشعب الحقيقية من جريدة المواد الرسمية (subp.mutah.edu.jo) */}
+          {subpPreview.loading && (
+            <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container-high/60 flex items-center gap-2 text-xs text-on-surface-variant animate-pulse">
+              <span className="material-symbols-outlined text-base animate-spin text-secondary">sync</span>
+              <span>جارٍ الاستعلام عن الشعب ومدرسي المساق والقاعات من جريدة المواد الرسمية...</span>
+            </div>
+          )}
+
+          {!subpPreview.loading && subpPreview.sections.length > 0 && (
+            <div className="p-3.5 rounded-xl bg-surface-container-low border border-secondary/30 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <span className="material-symbols-outlined text-secondary text-base">verified</span>
+                  <span>جريدة المواد الرسمية: {subpPreview.courseName}</span>
+                </div>
+                <span className="text-[11px] text-on-surface-variant font-mono">
+                  {subpPreview.sections.length} شعب معروضة
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {subpPreview.sections.map((sec) => {
+                  const isSelected = addSection === sec.section;
+                  return (
+                    <button
+                      key={sec.section}
+                      type="button"
+                      onClick={() => setAddSection(sec.section)}
+                      className={`p-2.5 rounded-lg text-right transition-all flex flex-col gap-1 border cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary text-on-primary border-primary shadow-sm'
+                          : 'bg-surface-container-lowest hover:bg-surface-container text-on-surface border-surface-container-high/60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold">شعبة {sec.section}</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                            sec.isFull
+                              ? isSelected ? 'bg-error/30 text-on-primary' : 'bg-error/15 text-error'
+                              : isSelected ? 'bg-white/20 text-on-primary' : 'bg-emerald-500/15 text-emerald-700'
+                          }`}
+                        >
+                          {sec.availableSeats > 0 ? `${sec.availableSeats} مقعد شاغر` : 'ممتلئة'}
+                        </span>
+                      </div>
+                      <div className={`flex items-center gap-1 text-[11px] ${isSelected ? 'text-on-primary/90' : 'text-primary'}`}>
+                        <span className="material-symbols-outlined text-xs">person</span>
+                        <span className="truncate">{sec.instructor || 'هيئة تدريس'}</span>
+                      </div>
+                      <div className={`flex items-center justify-between text-[10px] ${isSelected ? 'text-on-primary/80' : 'text-on-surface-variant'}`}>
+                        <span>{sec.days}</span>
+                        <span dir="ltr">{sec.room}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* أزرار الإجراءات للنموذج */}
           <div className="flex items-center gap-3 pt-2">
             <button
@@ -736,71 +844,7 @@ export default function RegistrationMenuPage() {
         </form>
       </section>
 
-      {/* 6. شبكة الخدمات الأكاديمية الإلكترونية (Academic Electronic Services Grid) */}
-      <section className="space-y-space-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-lg">widgets</span>
-            </span>
-            <div>
-              <h2 className="font-headline-md text-headline-md text-primary font-bold">
-                خدمات القبول والتسجيل الإلكترونية
-              </h2>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">
-                الوصول المباشر إلى المعاملات الأكاديمية، التأجيل، توسعة الشعب، وتغيير التخصص
-              </p>
-            </div>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-md">
-          {data?.services.map((service) => {
-            const isInternal = service.isInternal;
-            const CardWrapper = isInternal ? Link : 'a';
-            const extraProps = isInternal ? {} : { target: '_blank', rel: 'noopener noreferrer' };
-            const iconName = getServiceIcon(service.id, service.title);
-
-            return (
-              <CardWrapper
-                key={service.id}
-                href={service.href}
-                {...(extraProps as any)}
-                className="bg-surface-container-lowest border border-surface-container-high/40 rounded-xl p-space-md sm:p-space-lg hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                      <span className="material-symbols-outlined text-xl">{iconName}</span>
-                    </span>
-                    {service.badge && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20">
-                        {service.badge}
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface group-hover:text-primary transition-colors mb-1.5">
-                    {service.title}
-                  </h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                    {service.description}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-surface-container-high/40 flex items-center justify-between text-xs text-on-surface-variant group-hover:text-primary transition-colors">
-                  <span className="font-label-md font-semibold">
-                    {isInternal ? 'فتح الخدمة' : 'بوابة الجامعة الرسمية'}
-                  </span>
-                  <span className="material-symbols-outlined text-base transition-transform group-hover:-translate-x-1">
-                    {isInternal ? 'arrow_back' : 'open_in_new'}
-                  </span>
-                </div>
-              </CardWrapper>
-            );
-          })}
-        </div>
-      </section>
 
       {/* 7. نافذة تأكيد سحب المادة (Modal مطابق لنظام التصميم) */}
       {dropTarget && (

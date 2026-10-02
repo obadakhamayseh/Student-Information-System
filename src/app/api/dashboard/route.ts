@@ -3,7 +3,9 @@ import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseDashboardHtml } from '@/lib/parsers/dashboard.parser';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('refresh') === 'true';
   const session = await getSession();
 
   if (!session.isLoggedIn || !session.cookies) {
@@ -53,6 +55,17 @@ export async function GET() {
       session.studentName = data.studentName;
       await session.save();
     }
+
+    // إثراء المقررات بأسماء الدكاترة والقاعات الدقيقة من جريدة المواد الرسمية (subp.mutah.edu.jo)
+    if (data.courses && data.courses.length > 0) {
+      try {
+        const { SubpClient } = await import('@/lib/upstream/subp.client');
+        data.courses = await SubpClient.enrichCourses(data.courses, forceRefresh);
+      } catch (err) {
+        console.warn('[DASHBOARD] Could not enrich courses with subp:', err);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {

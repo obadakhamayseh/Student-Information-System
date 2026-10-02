@@ -155,29 +155,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </button>
           </div>
         </div>
-
-        {/* Bottom Support Widget */}
-        <div className="p-space-md bg-surface-container-low">
-          <div className="p-space-sm rounded-lg bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex flex-col gap-space-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm text-on-surface-variant">
-                مركز الدعم الفني
-              </span>
-              <span className="material-symbols-outlined text-secondary text-sm">
-                support_agent
-              </span>
-            </div>
-            <span className="font-body-sm text-body-sm text-on-surface font-semibold">
-              عمادة القبول والتسجيل
-            </span>
-            <div className="flex items-center gap-space-xs text-secondary">
-              <span className="material-symbols-outlined text-xs">call</span>
-              <span className="font-label-sm text-label-sm" dir="ltr">
-                +962 3 2372380
-              </span>
-            </div>
-          </div>
-        </div>
       </aside>
     </>
   );

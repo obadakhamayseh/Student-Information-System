@@ -3,7 +3,9 @@ import { getSession } from '@/lib/session';
 import { MutahClient, SessionExpiredError } from '@/lib/upstream/client';
 import { parseRegMenuHtml } from '@/lib/parsers/registration.parser';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('refresh') === 'true';
   const session = await getSession();
 
   if (!session.isLoggedIn || !session.cookies) {
@@ -25,6 +27,16 @@ export async function GET() {
     }
 
     const data = parseRegMenuHtml(html);
+
+    if (data.registeredCourses && data.registeredCourses.length > 0) {
+      try {
+        const { SubpClient } = await import('@/lib/upstream/subp.client');
+        data.registeredCourses = await SubpClient.enrichCourses(data.registeredCourses, forceRefresh);
+      } catch (err) {
+        console.warn('[REGMENU] Could not enrich registered courses with subp:', err);
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {
