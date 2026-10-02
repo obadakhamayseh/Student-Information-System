@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { triggerPwaInstall } from '@/components/pwa-installer';
 
 interface HeaderProps {
   studentId?: string;
@@ -147,6 +148,16 @@ export default function Header({
             <span className="font-label-md text-label-md hidden sm:inline">
               مزامنة
             </span>
+          </button>
+
+          {/* زر تحميل التطبيق على الهاتف PWA */}
+          <button
+            onClick={() => triggerPwaInstall()}
+            className="flex items-center gap-1.5 bg-secondary/15 hover:bg-secondary/25 text-secondary border border-secondary/30 p-2 sm:px-3 sm:py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="تحميل البوابة كتطبيق على الهاتف أو الحاسوب"
+          >
+            <span className="material-symbols-outlined text-lg">install_mobile</span>
+            <span className="hidden md:inline">تحميل التطبيق</span>
           </button>
         </div>
 

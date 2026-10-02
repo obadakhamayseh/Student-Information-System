@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Cairo } from 'next/font/google';
 import './globals.css';
+import PwaInstaller from '@/components/pwa-installer';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -11,9 +12,20 @@ const cairo = Cairo({
 
 export const metadata: Metadata = {
   title: 'بوابة الطالب الذكية - جامعة مؤتة',
-  description: 'واجهة عصرية وسريعة لعرض السجل الأكاديمي والجدول الدراسي لطلبة جامعة مؤتة',
+  description: 'النظام الذكي لمعلومات الطلبة، العلامات، الجداول الدراسية، الخطة الأكاديمية والتسجيل - جامعة مؤتة',
+  manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icons/favicon.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'بوابة مؤتة',
+  },
+  applicationName: 'بوابة مؤتة',
+  formatDetection: {
+    telephone: false,
   },
 };
 
@@ -22,7 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#1e3a8a',
+  themeColor: '#00274d',
 };
 
 export default function RootLayout({
@@ -33,6 +45,12 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="بوابة مؤتة" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
           rel="stylesheet"
@@ -40,6 +58,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-background font-body-md text-on-surface">
         {children}
+        <PwaInstaller />
       </body>
     </html>
   );

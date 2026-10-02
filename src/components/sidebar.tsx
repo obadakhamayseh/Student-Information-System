@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { triggerPwaInstall } from '@/components/pwa-installer';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -124,6 +125,35 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               );
             })}
           </nav>
+        </div>
+
+        {/* PWA Install App Widget */}
+        <div className="px-space-md py-space-xs">
+          <div className="p-space-sm rounded-xl bg-gradient-to-br from-primary/10 to-secondary/15 border border-secondary/30 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-lg">install_mobile</span>
+              </span>
+              <div className="flex flex-col">
+                <span className="font-headline-sm text-xs font-bold text-primary">
+                  تطبيق بوابة مؤتة
+                </span>
+                <span className="text-[10px] text-on-surface-variant font-medium">
+                  تثبيت سريع على هاتفك
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerPwaInstall();
+                onClose?.();
+              }}
+              className="w-full bg-secondary hover:opacity-95 text-on-secondary py-1.5 px-3 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <span className="material-symbols-outlined text-sm">download</span>
+              <span>تحميل التطبيق</span>
+            </button>
+          </div>
         </div>
 
         {/* Bottom Support Widget */}
