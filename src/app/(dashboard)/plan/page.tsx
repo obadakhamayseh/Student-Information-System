@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { StudyPlanData, PlanCourse } from '@/lib/schemas/plan.schema';
+import { exportToCsv } from '@/lib/export-utils';
+import { PrintHeader, PrintFooter } from '@/components/print-header';
 
 interface CategoryStats {
   key: string;
@@ -103,20 +106,31 @@ export default function PlanPage() {
       });
     }
 
-    // Fallback: Real Official Mutah Portal Requirements matching authentic portal data exactly
-    const authenticPortalDefs = [
-      { key: 'children_00', name: '00', completedHours: 0, requiredHours: 0, passedCoursesCount: 1, totalCoursesCount: 3, icon: 'description' },
-      { key: 'children_01', name: 'استدراكي', completedHours: 6, requiredHours: 0, passedCoursesCount: 2, totalCoursesCount: 3, icon: 'autorenew' },
-      { key: 'children_1', name: 'جامعه إجباري', completedHours: 12, requiredHours: 18, passedCoursesCount: 4, totalCoursesCount: 6, icon: 'account_balance' },
-      { key: 'children_21', name: 'جامعه إختياري/علوم انسانية', completedHours: 3, requiredHours: 3, passedCoursesCount: 1, totalCoursesCount: 9, icon: 'account_balance' },
-      { key: 'children_22', name: 'جامعه إختياري/علوم اجتماعية و اقتصادية', completedHours: 3, requiredHours: 3, passedCoursesCount: 1, totalCoursesCount: 7, icon: 'account_balance' },
-      { key: 'children_23', name: 'جامعه إختياري/العلوم و التكنولوجيا', completedHours: 3, requiredHours: 3, passedCoursesCount: 1, totalCoursesCount: 8, icon: 'account_balance' },
-      { key: 'children_3', name: 'كليه اجباري', completedHours: 21, requiredHours: 24, passedCoursesCount: 7, totalCoursesCount: 8, icon: 'domain' },
-      { key: 'children_5', name: 'تخصـص إجباري', completedHours: 41, requiredHours: 72, passedCoursesCount: 17, totalCoursesCount: 30, icon: 'school' },
-      { key: 'children_6', name: 'تخصـص إختياري', completedHours: 3, requiredHours: 9, passedCoursesCount: 1, totalCoursesCount: 12, icon: 'school' },
-    ];
+    // Fallback: Dynamically generate categories from real courses if categories list is empty
+    const catMap = new Map<string, { key: string; name: string; completedHours: number; requiredHours: number; passedCoursesCount: number; totalCoursesCount: number; icon: string }>();
 
-    return authenticPortalDefs.map((def) => {
+    for (const c of coursesList) {
+      const catName = c.category || 'متطلبات عامة';
+      const existing = catMap.get(catName) || {
+        key: `cat_${encodeURIComponent(catName)}`,
+        name: catName,
+        completedHours: 0,
+        requiredHours: 0,
+        passedCoursesCount: 0,
+        totalCoursesCount: 0,
+        icon: getCategoryIcon(catName),
+      };
+
+      existing.totalCoursesCount++;
+      existing.requiredHours += (c.creditHours || 3);
+      if (c.status === 'منجزة') {
+        existing.passedCoursesCount++;
+        existing.completedHours += (c.creditHours || 3);
+      }
+      catMap.set(catName, existing);
+    }
+
+    return Array.from(catMap.values()).map((def) => {
       const percent =
         def.requiredHours > 0
           ? Math.min(100, Math.round((def.completedHours / def.requiredHours) * 100))
@@ -129,7 +143,7 @@ export default function PlanPage() {
         percent,
       };
     });
-  }, [data?.categories]);
+  }, [data?.categories, coursesList]);
 
   // Filter courses based on Search, Category, and Status
   const filteredCourses = useMemo(() => {
@@ -184,18 +198,52 @@ export default function PlanPage() {
     });
   }, [coursesList, selectedCategoryKey, statusFilter, searchQuery, categoryStats]);
 
-  const completedHours = data?.completedHours || 86;
-  const totalHours = data?.totalHours || 132;
-  // Calculate in-progress hours accurately from registered courses (16 hours total: 5 courses * 3h + project 1 = 1h)
+  const completedHours = data?.completedHours || 0;
+  const totalHours = data?.totalHours || 0;
   const currentRegisteredHours = coursesList.filter((c) => c.status === 'مسجلة').reduce((sum, c) => {
-    if (c.courseNumber === '2222491' || c.courseName.includes('مشروع تخرج 1') || c.courseName.includes('مشروع تخرج1')) {
+    if (c.creditHours && c.creditHours > 0) {
+      return sum + c.creditHours;
+    }
+    if (c.courseName.includes('مشروع تخرج 1') || c.courseName.includes('مشروع تخرج1')) {
       return sum + 1;
     }
-    return sum + (c.creditHours || 3);
-  }, 0) || 16;
-  const remainingAfterCurrent = Math.max(0, totalHours - (completedHours + currentRegisteredHours)); // 132 - (86 + 16) = 30
-  const remainingTotal = Math.max(0, totalHours - completedHours); // 46 total
-  const progressPercent = Math.min(100, Math.round((completedHours / totalHours) * 100));
+    return sum + 3;
+  }, 0);
+  const remainingAfterCurrent = Math.max(0, totalHours - (completedHours + currentRegisteredHours));
+  const remainingTotal = Math.max(0, totalHours - completedHours);
+  const progressPercent = totalHours > 0 ? Math.min(100, Math.round((completedHours / totalHours) * 100)) : 0;
+
+  // حساب الفصل الدراسي الحالي من بيانات الخطة أو الـ API
+  const currentSemester = data?.currentSemester || 'الفصل الدراسي الحالي';
+
+  // حساب الساعات المتبقية لتقدير موعد التخرج ديناميكياً
+  const MAX_HOURS_PER_SEMESTER = 18;
+  const MAX_HOURS_SUMMER = 12;
+  const semestersNeeded = remainingAfterCurrent <= 0 ? 0
+    : remainingAfterCurrent <= MAX_HOURS_SUMMER ? 1
+    : Math.ceil((remainingAfterCurrent - MAX_HOURS_SUMMER) / MAX_HOURS_PER_SEMESTER) + 1;
+
+  // بناء خريطة الفصول المتبقية ديناميكياً
+  const buildGraduationRoadmap = () => {
+    if (remainingAfterCurrent <= 0) return [];
+    const roadmap = [];
+    let remaining = remainingAfterCurrent;
+    let step = 1;
+    while (remaining > 0 && step <= 4) {
+      const isSummer = step === semestersNeeded && remaining <= MAX_HOURS_SUMMER;
+      const hours = isSummer ? Math.min(remaining, MAX_HOURS_SUMMER) : Math.min(remaining, MAX_HOURS_PER_SEMESTER);
+      roadmap.push({ step, hours, isSummer });
+      remaining -= hours;
+      step++;
+    }
+    return roadmap;
+  };
+  const graduationRoadmap = buildGraduationRoadmap();
+
+  // شجرة الاعتمادية — تُبنى من قائمة المواد الفعلية للطالب
+  const dependencyNodes = coursesList
+    .filter((c) => (c.status === 'منجزة' || c.status === 'مسجلة') && c.courseNumber)
+    .slice(0, 5);
 
   // Stroke-dash calculations for 160x160 SVG Gauge (r=68, circumference approx 427.26)
   const circumference = 2 * Math.PI * 68;
@@ -235,8 +283,55 @@ export default function PlanPage() {
     );
   }
 
+  const handlePrintPlan = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
+
+  const handleExportPlanCsv = () => {
+    if (!coursesList || coursesList.length === 0) return;
+
+    const headers = [
+      'رقم المقرر',
+      'اسم المقرر',
+      'الساعات المعتمدة',
+      'تصنيف المتطلب',
+      'المتطلب السابق',
+      'الحالة الأكاديمية',
+    ];
+
+    const rows = coursesList.map((c) => [
+      c.courseNumber,
+      c.courseName,
+      c.creditHours || 3,
+      c.category || 'متطلب خطة',
+      c.prerequisite || '—',
+      c.status || 'متبقية',
+    ]);
+
+    const filename = `الخطة_الدراسية_${data?.studentId || 'جامعة_مؤتة'}_${new Date().toISOString().slice(0, 10)}.csv`;
+    exportToCsv(filename, headers, rows);
+    showToast('تم تصدير الخطة الدراسية بنجاح إلى ملف Excel / CSV');
+  };
+
   return (
     <div className="flex flex-col w-full">
+      {/* رأس الطباعة الرسمي للجامعة (يظهر فقط عند الطباعة أو حفظ PDF) */}
+      <PrintHeader
+        documentTitle="وثيقة التدقيق الأكاديمي والخطة الدراسية"
+        studentName={data?.studentName}
+        studentId={data?.studentId}
+        major={data?.majorName}
+        academicYear={currentSemester}
+        extraStats={[
+          { label: 'الساعات المنجزة', value: `${completedHours} س.م` },
+          { label: 'الساعات المسجلة', value: `${currentRegisteredHours} س.م` },
+          { label: 'الساعات المتبقية', value: `${remainingAfterCurrent} س.م` },
+          { label: 'نسبة الإنجاز', value: `${progressPercent}%` },
+        ]}
+      />
+
       {/* Top Degree Progress Overview Bento Strip */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-space-lg mb-space-xl">
         {/* Big Radial/Stats Card */}
@@ -245,10 +340,10 @@ export default function PlanPage() {
             <div>
               <div className="flex items-center gap-space-xs mb-1 flex-wrap">
                 <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-bold">
-                  {data?.majorName || 'علم البيانات والذكاء الاصطناعي'} • خطة {data?.planYear || '2024'}
+                  {data?.majorName || 'الخطة الدراسية'} {data?.planYear ? `• خطة ${data.planYear}` : ''}
                 </span>
                 <span className="bg-secondary/15 text-secondary px-2 py-0.5 rounded-full font-label-sm text-label-sm font-semibold">
-                  الفصل الأول 2026 / 2027 (الحالي)
+                  {currentSemester} (الحالي)
                 </span>
               </div>
               <h1 className="font-headline-lg text-headline-lg text-primary font-bold">
@@ -258,11 +353,23 @@ export default function PlanPage() {
                 تتبع ساعات التخرج المنجزة والمتطلبات السابقة لفتح المواد المتقدمة وفق الخطة الشجرية المعتمدة
               </p>
             </div>
-            <div className="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-sm rounded-lg self-stretch sm:self-auto justify-between border border-surface-container-high/50">
-              <div className="text-right">
-                <span className="font-label-sm text-label-sm text-on-surface-variant block">المرشد الأكاديمي</span>
-                <span className="font-label-lg text-label-lg text-primary font-bold">عمادة كلية تكنولوجيا المعلومات</span>
-              </div>
+            <div className="flex items-center gap-2 flex-wrap no-print">
+              <button
+                onClick={handlePrintPlan}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all cursor-pointer shadow-sm"
+                title="طباعة وثيقة الخطة الدراسية أو حفظها كـ PDF"
+              >
+                <span className="material-symbols-outlined text-base">print</span>
+                <span>طباعة الخطة (PDF)</span>
+              </button>
+              <button
+                onClick={handleExportPlanCsv}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-high text-primary border border-surface-container-high/60 text-xs font-bold hover:bg-surface-container-highest transition-all cursor-pointer shadow-sm"
+                title="تصدير مواد الخطة الدراسية كملف Excel / CSV"
+              >
+                <span className="material-symbols-outlined text-base text-secondary">table_view</span>
+                <span>تصدير Excel</span>
+              </button>
             </div>
           </div>
 
@@ -326,7 +433,7 @@ export default function PlanPage() {
                 <span className="font-headline-md text-headline-md text-on-tertiary-container font-bold mt-1">
                   {currentRegisteredHours}
                 </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant/80">الفصل الحالي (مشروع 1 = 1 س)</span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant/80">الفصل الحالي</span>
               </div>
               <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col col-span-2 sm:col-span-1 border border-surface-container-high/40">
                 <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
@@ -346,7 +453,7 @@ export default function PlanPage() {
                       الوضع الأكاديمي: سليم ومطابق لشروط الخطة
                     </span>
                     <span className="font-label-sm text-label-sm text-on-surface-variant">
-                      86 ساعة مجتازة + 16 ساعة مسجلة حالياً = 102 ساعة منجزة بعد هذا الفصل (يتبقى 30 س.م للتخرج)
+                      {completedHours} ساعة مجتازة + {currentRegisteredHours} ساعة مسجلة حالياً = {completedHours + currentRegisteredHours} ساعة منجزة بعد هذا الفصل{remainingAfterCurrent > 0 ? ` (يتبقى ${remainingAfterCurrent} س.م للتخرج)` : ' — مؤهل للتخرج ✓'}
                     </span>
                   </div>
                 </div>
@@ -362,7 +469,7 @@ export default function PlanPage() {
           </div>
         </div>
 
-        {/* Graduation Horizon Card */}
+        {/* Graduation Horizon Card — Dynamic */}
         <div className="xl:col-span-4 bg-primary-container text-on-primary rounded-xl p-space-lg shadow-sm flex flex-col justify-between relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between mb-space-md">
@@ -371,72 +478,77 @@ export default function PlanPage() {
                 <h2 className="font-headline-sm text-headline-sm text-on-primary font-bold">خريطة الفصول المتبقية للتخرج</h2>
               </div>
               <span className="bg-tertiary-container text-tertiary-fixed text-xs px-2.5 py-1 rounded font-label-sm font-bold">
-                تخرج صيف 2027
+                {remainingAfterCurrent <= 0 ? 'جاهز للتخرج' : `${semestersNeeded} فصل متبقٍ`}
               </span>
             </div>
-            <p className="font-body-sm text-body-sm text-on-primary-container mb-space-md">
-              الفصل الحالي قيد الدراسة: <strong>الفصل الأول 2026 / 2027</strong> (16 س.م). يتبقى 30 ساعة موزعة كالتالي:
-            </p>
 
-            <div className="flex flex-col gap-space-sm">
-              {/* Term 1: Second Semester 2026/2027 */}
-              <div className="bg-tertiary/40 p-space-sm rounded-lg flex items-center justify-between border border-white/5">
-                <div className="flex items-center gap-space-sm">
-                  <div className="w-8 h-8 rounded-full bg-secondary/20 text-secondary-container flex items-center justify-center font-bold text-xs font-label-md shrink-0">
-                    1
-                  </div>
-                  <div>
-                    <span className="font-label-md text-label-md text-on-primary block font-bold">الفصل الثاني 2026 / 2027</span>
-                    <span className="font-label-sm text-label-sm text-on-primary-container">مشروع تخرج 2 (2 س) + مواد تخصصية</span>
-                  </div>
-                </div>
-                <span className="font-label-md text-label-md font-bold text-secondary-container shrink-0">18 س.م</span>
+            {remainingAfterCurrent <= 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary-container text-5xl mb-3">school</span>
+                <p className="font-headline-sm text-on-primary font-bold">مبروك! أتممت جميع متطلبات التخرج</p>
+                <p className="font-body-sm text-on-primary-container mt-1">لقد أنجزت {completedHours} ساعة معتمدة من أصل {totalHours} ساعة مطلوبة</p>
               </div>
-
-              {/* Term 2: Summer Semester 2026/2027 (Graduation Term) */}
-              <div className="bg-tertiary/40 p-space-sm rounded-lg flex items-center justify-between border border-secondary/40 shadow-sm">
-                <div className="flex items-center gap-space-sm">
-                  <div className="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs font-label-md shrink-0">
-                    2
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-label-md text-label-md text-on-primary font-bold">الفصل الصيفي 2026 / 2027</span>
-                      <span className="text-[10px] bg-secondary px-1.5 py-0.2 rounded text-on-secondary font-bold">فصل التخرج</span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-primary-container">المساقات المتبقية لاستكمال متطلبات الخطة (132 س)</span>
-                  </div>
-                </div>
-                <div className="text-left shrink-0">
-                  <span className="font-label-md text-label-md font-bold text-secondary-fixed block">12 س.م</span>
-                  <span className="text-[10px] text-secondary-container font-medium">حد التخرج بالصيفي</span>
-                </div>
-              </div>
-
-              {/* Academic Regulation Notice Box */}
-              <div className="p-2.5 rounded-lg bg-surface-container-lowest/15 border border-white/10 text-xs text-on-primary-container flex items-start gap-2 mt-1">
-                <span className="material-symbols-outlined text-secondary-fixed text-base shrink-0 mt-0.5">policy</span>
-                <p className="leading-relaxed text-[11px]">
-                  <strong>التعليمات الأكاديمية الرسمية:</strong> الحد المسموح لتنزيل الساعات في الفصل الصيفي هو <strong>10 ساعات</strong> للطالب العادي، أما الطالب الذي يتخرج في الفصل الصيفي فيمكن أن يُنزّل حتى <strong>12 ساعة معتمدة</strong>.
+            ) : (
+              <>
+                <p className="font-body-sm text-body-sm text-on-primary-container mb-space-md">
+                  الفصل الحالي: <strong>{currentSemester}</strong> ({currentRegisteredHours} س.م). يتبقى <strong>{remainingAfterCurrent} ساعة</strong> بعده:
                 </p>
-              </div>
-            </div>
+                <div className="flex flex-col gap-space-sm">
+                  {graduationRoadmap.map((term) => (
+                    <div
+                      key={term.step}
+                      className={`bg-tertiary/40 p-space-sm rounded-lg flex items-center justify-between ${
+                        term.isSummer ? 'border border-secondary/40 shadow-sm' : 'border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-space-sm">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs font-label-md shrink-0 ${
+                          term.isSummer ? 'bg-secondary text-on-secondary' : 'bg-secondary/20 text-secondary-container'
+                        }`}>
+                          {term.step}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-label-md text-label-md text-on-primary block font-bold">
+                              {term.isSummer ? 'الفصل الصيفي (فصل التخرج)' : `الفصل ${term.step === 1 ? 'القادم' : `رقم ${term.step}`}`}
+                            </span>
+                            {term.isSummer && (
+                              <span className="text-[10px] bg-secondary px-1.5 rounded text-on-secondary font-bold">تخرج</span>
+                            )}
+                          </div>
+                          <span className="font-label-sm text-label-sm text-on-primary-container">
+                            {term.isSummer ? 'المساقات المتبقية لاستكمال متطلبات الخطة' : 'مواد من خطتك الدراسية'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="font-label-md text-label-md font-bold text-secondary-container shrink-0">{term.hours} س.م</span>
+                    </div>
+                  ))}
+                  <div className="p-2.5 rounded-lg bg-surface-container-lowest/15 border border-white/10 text-xs text-on-primary-container flex items-start gap-2 mt-1">
+                    <span className="material-symbols-outlined text-secondary-fixed text-base shrink-0 mt-0.5">policy</span>
+                    <p className="leading-relaxed text-[11px]">
+                      <strong>التعليمات الأكاديمية الرسمية:</strong> الحد المسموح في الفصل الصيفي <strong>10 ساعات</strong> للطالب العادي، وحتى <strong>12 ساعة</strong> لطالب التخرج.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mt-space-md pt-space-sm border-t border-primary/20 flex items-center justify-between">
             <div>
-              <span className="font-label-sm text-label-sm text-on-primary-container block">الموعد المتوقع للتخرج:</span>
+              <span className="font-label-sm text-label-sm text-on-primary-container block">الساعات المتبقية إجمالاً:</span>
               <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">
-                صيف 2027 (آب / تموز 2027)
+                {remainingTotal} ساعة ({remainingAfterCurrent} بعد الفصل الحالي)
               </span>
             </div>
-            <button
-              onClick={() => showToast('خطة التخرج: إنهاء 16 س الفصل الحالي + 18 س الفصل الثاني + 12 س صيفي للتخرج صيف 2027')}
-              className="bg-secondary text-on-secondary px-space-md py-2 rounded-lg font-label-md text-label-md hover:opacity-95 transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+            <Link
+              href="/roadmap"
+              className="bg-secondary text-on-secondary px-space-md py-2 rounded-lg font-label-md text-label-md hover:opacity-95 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <span>تفاصيل المسار</span>
-              <span className="material-symbols-outlined text-sm">visibility</span>
-            </button>
+              <span>خريطة التخرج الذكية</span>
+              <span className="material-symbols-outlined text-sm">alt_route</span>
+            </Link>
           </div>
         </div>
       </div>
@@ -824,109 +936,60 @@ export default function PlanPage() {
             </div>
           </div>
 
-          {/* Tree Flow Visual Nodes */}
+          {/* Tree Flow Visual Nodes — Dynamic from student's actual courses */}
           <div className="relative overflow-x-auto py-space-lg">
-            <div className="min-w-[850px] flex items-center justify-between relative px-space-md">
-              {/* Node 1: مقدمة في البرمجة */}
-              <div className="w-48 bg-[#ecfdf5] border-2 border-secondary p-space-md rounded-xl shadow-sm text-center relative z-10">
-                <span className="bg-secondary text-on-secondary px-2 py-0.5 rounded text-[10px] font-bold block mb-1">
-                  مستوى 1 • مجتاز
-                </span>
-                <span className="font-label-md text-label-md text-[#065f46] font-bold block">
-                  مقدمة في البرمجة
-                </span>
-                <span className="font-mono text-xs text-on-surface-variant" dir="ltr">
-                  2211121
-                </span>
+            {dependencyNodes.length > 0 ? (
+              <div className="min-w-[850px] flex items-center justify-between relative px-space-md">
+                {dependencyNodes.map((c, idx) => {
+                  const isPassed = c.status === 'منجزة';
+                  const isCurrent = c.status === 'مسجلة';
+                  const isLast = idx === dependencyNodes.length - 1;
+                  return (
+                    <React.Fragment key={c.courseNumber || idx}>
+                      <div className={`w-44 p-space-md rounded-xl shadow-sm text-center relative z-10 border-2 ${
+                        isPassed
+                          ? 'bg-[#ecfdf5] border-secondary'
+                          : isCurrent
+                          ? 'bg-tertiary-fixed border-on-tertiary-container'
+                          : 'bg-surface-container-high border-outline-variant'
+                      }`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold block mb-1 ${
+                          isPassed ? 'bg-secondary text-on-secondary'
+                          : isCurrent ? 'bg-on-tertiary-container text-on-primary'
+                          : 'bg-surface-container-highest text-primary'
+                        }`}>
+                          {isPassed ? 'مجتاز ✓' : isCurrent ? 'مسجل حالياً' : 'متبقي'}
+                        </span>
+                        <span className={`font-label-md text-label-md font-bold block text-sm leading-tight ${
+                          isPassed ? 'text-[#065f46]' : 'text-primary'
+                        }`}>
+                          {c.courseName.length > 22 ? c.courseName.slice(0, 22) + '…' : c.courseName}
+                        </span>
+                        <span className="font-mono text-xs text-on-surface-variant" dir="ltr">{c.courseNumber}</span>
+                      </div>
+                      {!isLast && (
+                        <div className="flex-1 flex items-center justify-center relative">
+                          <div className={`h-1 w-full ${
+                            isPassed ? 'bg-secondary' : isCurrent ? 'bg-on-tertiary-container' : 'bg-outline-variant'
+                          }`} />
+                          <span className="material-symbols-outlined text-outline absolute -left-2 text-base">arrow_back</span>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
-
-              {/* Connection Arrow 1 */}
-              <div className="flex-1 flex items-center justify-center relative">
-                <div className="h-1 w-full bg-secondary"></div>
-                <span className="material-symbols-outlined text-secondary absolute -left-2 text-base">
-                  arrow_back
-                </span>
+            ) : (
+              <div className="text-center text-on-surface-variant py-8">
+                لا توجد بيانات كافية لعرض شجرة الاعتمادية.
               </div>
-
-              {/* Node 2: البرمجة الشيئية */}
-              <div className="w-48 bg-[#ecfdf5] border-2 border-secondary p-space-md rounded-xl shadow-sm text-center relative z-10">
-                <span className="bg-secondary text-on-secondary px-2 py-0.5 rounded text-[10px] font-bold block mb-1">
-                  مستوى 1 • مجتاز
-                </span>
-                <span className="font-label-md text-label-md text-[#065f46] font-bold block">
-                  البرمجة الشيئية
-                </span>
-                <span className="font-mono text-xs text-on-surface-variant" dir="ltr">
-                  2211123
-                </span>
-              </div>
-
-              {/* Connection Arrow 2 */}
-              <div className="flex-1 flex items-center justify-center relative">
-                <div className="h-1 w-full bg-secondary"></div>
-                <span className="material-symbols-outlined text-secondary absolute -left-2 text-base">
-                  arrow_back
-                </span>
-              </div>
-
-              {/* Node 3: تركيب بيانات */}
-              <div className="w-48 bg-[#ecfdf5] border-2 border-secondary p-space-md rounded-xl shadow-sm text-center relative z-10">
-                <span className="bg-secondary text-on-secondary px-2 py-0.5 rounded text-[10px] font-bold block mb-1">
-                  مستوى 2 • مجتاز
-                </span>
-                <span className="font-label-md text-label-md text-[#065f46] font-bold block">
-                  تركيب بيانات
-                </span>
-                <span className="font-mono text-xs text-on-surface-variant" dir="ltr">
-                  2211211
-                </span>
-              </div>
-
-              {/* Connection Arrow 3 */}
-              <div className="flex-1 flex items-center justify-center relative">
-                <div className="h-1 w-full bg-on-tertiary-container"></div>
-                <span className="material-symbols-outlined text-on-tertiary-container absolute -left-2 text-base">
-                  arrow_back
-                </span>
-              </div>
-
-              {/* Node 4: التعلم الآلي والعميق */}
-              <div className="w-48 bg-tertiary-fixed border-2 border-on-tertiary-container p-space-md rounded-xl shadow-sm text-center relative z-10">
-                <span className="bg-on-tertiary-container text-on-primary px-2 py-0.5 rounded text-[10px] font-bold block mb-1">
-                  مستوى 3 • مسجل حالياً
-                </span>
-                <span className="font-label-md text-label-md text-primary font-bold block">
-                  التعلم الآلي والعميق
-                </span>
-                <span className="font-mono text-xs text-on-surface-variant" dir="ltr">
-                  2222364
-                </span>
-              </div>
-
-              {/* Connection Arrow 4 */}
-              <div className="flex-1 flex items-center justify-center relative">
-                <div className="h-1 w-full bg-outline-variant"></div>
-                <span className="material-symbols-outlined text-outline absolute -left-2 text-base">
-                  arrow_back
-                </span>
-              </div>
-
-              {/* Node 5: مشروع تخرج 1 */}
-              <div className="w-48 bg-surface-container-high border-2 border-outline-variant p-space-md rounded-xl shadow-sm text-center relative z-10">
-                <span className="bg-surface-container-highest text-primary px-2 py-0.5 rounded text-[10px] font-bold block mb-1">
-                  مستوى 4 • مسجل
-                </span>
-                <span className="font-label-md text-label-md text-primary font-bold block">
-                  مشروع تخرج 1
-                </span>
-                <span className="font-mono text-xs text-on-surface-variant" dir="ltr">
-                  2222491
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
+
+      {/* تذييل الطباعة الرسمي للجامعة */}
+      <PrintFooter />
 
       {/* Floating Micro-interaction Toast */}
       {toastMessage && (

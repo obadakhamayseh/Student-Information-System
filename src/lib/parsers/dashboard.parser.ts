@@ -88,15 +88,24 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
       if (t.includes('التخصص:') || t.includes('تخصص')) {
         const code = t.replace(/\D/g, '');
         if (code === '2222') major = 'علم البيانات والذكاء الاصطناعي';
+        else if (code === '2211') major = 'علم الحاسوب';
+        else if (code === '2212') major = 'هندسة البرمجيات';
+        else if (code === '2214') major = 'الأمن السيبراني';
+        else if (t.replace(/.*التخصص:\s*/, '').trim()) major = t.replace(/.*التخصص:\s*/, '').trim();
         else major = t;
       }
     });
+
+    if (!major && studentId && studentId.length >= 9) {
+      const deptCode = studentId.slice(5, 9);
+      if (deptCode === '2222') major = 'علم البيانات والذكاء الاصطناعي';
+      else if (deptCode === '2211') major = 'علم الحاسوب';
+      else if (deptCode === '2212') major = 'هندسة البرمجيات';
+      else if (deptCode === '2214') major = 'الأمن السيبراني';
+    }
+
     if (!major) {
-      if (html.includes('2222') || html.includes('ذكاء') || html.includes('بيانات')) {
-        major = 'علم البيانات والذكاء الاصطناعي';
-      } else {
-        major = college || 'جامعة مؤتة';
-      }
+      major = college || 'جامعة مؤتة';
     }
   }
 
@@ -226,11 +235,22 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
     registeredHours = courses.reduce((sum, c) => sum + (c.creditHours || 3), 0);
   }
 
+  let studyPlan = 'خطة دراسية';
+  const planMatch = html.match(/الخطة:\s*(\d+)/) || html.match(/خطة\s*(\d+)/);
+  if (planMatch) {
+    studyPlan = `خطة ${planMatch[1]}`;
+  } else if (studentId && studentId.length >= 5) {
+    const yr = studentId.substring(1, 5);
+    if (/^\d{4}$/.test(yr)) {
+      studyPlan = `خطة ${yr}`;
+    }
+  }
+
   const parsed = {
     studentId: studentId || '',
     studentName: studentName || '',
-    college: college || 'كلية تكنولوجيا المعلومات',
-    major: major || 'علم البيانات والذكاء الاصطناعي',
+    college: college || (html.includes('تكنولوجيا المعلومات') ? 'كلية تكنولوجيا المعلومات' : 'جامعة مؤتة'),
+    major: major || college || 'جامعة مؤتة',
     advisor,
     academicStatus,
     cumulativeGpa,
@@ -240,7 +260,7 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
     registeredHours,
     paidHours,
     financialBalance,
-    studyPlan: 'خطة 2024',
+    studyPlan,
     currentSemester: 'الفصل الأول 2026/2027',
     militaryStatus,
     militaryExpireDate,

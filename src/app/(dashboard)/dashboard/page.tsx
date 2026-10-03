@@ -187,6 +187,13 @@ export default function DashboardPage() {
               </span>
             </div>
           </div>
+          <Link
+            href="/roadmap"
+            className="bg-secondary hover:bg-secondary/90 text-on-secondary px-space-md py-2.5 rounded-lg font-label-lg flex items-center gap-space-xs transition-all shadow-sm active:scale-95 cursor-pointer font-bold text-xs"
+          >
+            <span className="material-symbols-outlined text-lg">alt_route</span>
+            <span>خريطة التخرج الذكية</span>
+          </Link>
           <button
             className="bg-primary hover:bg-primary-container text-on-primary px-space-md py-2.5 rounded-lg font-label-lg flex items-center gap-space-xs transition-all shadow-sm active:scale-95 disabled:opacity-75 cursor-pointer"
             onClick={handleManualSync}
@@ -265,7 +272,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="font-headline-xl text-headline-xl font-bold text-primary">{passedHrs}</span>
-            <span className="font-body-sm text-body-sm text-on-surface-variant">من 132 ساعة</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">ساعة معتمدة</span>
           </div>
           <div className="mt-space-sm flex flex-col gap-1.5">
             <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">

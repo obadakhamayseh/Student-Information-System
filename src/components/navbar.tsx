@@ -12,6 +12,7 @@ import {
   LogOut,
   Sparkles,
   Maximize2,
+  Route,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -38,6 +39,7 @@ export default function Navbar({ studentId, studentName }: NavbarProps) {
     { href: '/grades', label: 'العلامات والسجل', icon: Award },
     { href: '/schedule', label: 'الجدول والامتحانات', icon: Calendar },
     { href: '/plan', label: 'الخطة الشجرية', icon: BookOpen },
+    { href: '/roadmap', label: 'خريطة التخرج', icon: Route },
   ];
 
   const isCurrentLink = (linkHref: string) => {

@@ -35,6 +35,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: 'account_tree',
     },
     {
+      title: 'خريطة التخرج ومسار الفصول',
+      href: '/roadmap',
+      icon: 'alt_route',
+    },
+    {
       title: 'التسجيل الإلكتروني',
       href: '/registration',
       icon: 'app_registration',

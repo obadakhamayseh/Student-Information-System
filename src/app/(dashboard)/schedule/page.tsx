@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ScheduleData } from '@/lib/schemas/schedule.schema';
 import type { CourseItem } from '@/lib/schemas/student.schema';
+import { exportToCsv } from '@/lib/export-utils';
+import { PrintHeader, PrintFooter } from '@/components/print-header';
 
 export default function SchedulePage() {
   const router = useRouter();
@@ -55,11 +57,14 @@ export default function SchedulePage() {
   const totalCreditHours =
     data?.totalRegisteredHours ||
     scheduleList.reduce((sum, c) => {
-      if (c.courseNumber === '2222491' || c.courseName.includes('مشروع تخرج 1') || c.courseName.includes('مشروع تخرج1')) {
+      if (c.creditHours && c.creditHours > 0) {
+        return sum + c.creditHours;
+      }
+      if (c.courseName.includes('مشروع تخرج 1') || c.courseName.includes('مشروع تخرج1')) {
         return sum + 1;
       }
-      return sum + (c.creditHours || 3);
-    }, 0) || 16;
+      return sum + 3;
+    }, 0);
 
   // Trigger iCal Download with real student courses
   const triggerDownloadICal = () => {
@@ -89,6 +94,36 @@ END:VCALENDAR`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowExportModal(false);
+  };
+
+  const handleExportCsv = () => {
+    if (!scheduleList.length) return;
+
+    const headers = [
+      'رقم المقرر',
+      'اسم المقرر',
+      'الشعبة',
+      'الساعات المعتمدة',
+      'أيام المحاضرة',
+      'الوقت',
+      'القاعة',
+      'مدرس المساق',
+    ];
+
+    const rows = scheduleList.map((c) => [
+      c.courseNumber,
+      c.courseName,
+      c.section || '—',
+      c.creditHours || 3,
+      c.days || '—',
+      c.time || '—',
+      c.room || '—',
+      c.instructor || 'هيئة تدريسية',
+    ]);
+
+    const filename = `الجدول_الدراسي_${data?.studentId || 'جامعة_مؤتة'}_${new Date().toISOString().slice(0, 10)}.csv`;
+    exportToCsv(filename, headers, rows);
     setShowExportModal(false);
   };
 
@@ -139,8 +174,57 @@ END:VCALENDAR`;
 
   return (
     <div className="flex flex-col w-full gap-space-lg">
+      {/* رأس الطباعة الرسمي للجامعة (يظهر فقط عند الطباعة أو حفظ PDF) */}
+      <PrintHeader
+        documentTitle="الجدول الدراسي الأسبوعي المعتمد"
+        studentName={data?.studentName}
+        studentId={data?.studentId}
+        major={data?.major}
+        academicYear={data?.currentSemester}
+        extraStats={[
+          { label: 'عدد المساقات المسجلة', value: `${courseCount} مواد` },
+          { label: 'مجموع الساعات المعتمدة', value: `${totalCreditHours} س.م` },
+          { label: 'حالة الجدول', value: 'معتمد ومثبت' },
+        ]}
+      />
+
+      {/* جدول المساقات المنظم للطباعة الرسمية (يظهر فقط في الطباعة/PDF) */}
+      <div className="hidden print:block w-full">
+        <h3 className="text-sm font-bold text-gray-900 mb-2 border-b pb-1">
+          تفاصيل المساقات المسجلة والقاعات التدريسية:
+        </h3>
+        <table className="w-full text-xs text-right border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border p-2">رقم المساق</th>
+              <th className="border p-2">اسم المساق</th>
+              <th className="border p-2">الشعبة</th>
+              <th className="border p-2">س.م</th>
+              <th className="border p-2">الأيام</th>
+              <th className="border p-2">الوقت</th>
+              <th className="border p-2">القاعة / المبنى</th>
+              <th className="border p-2">مدرس المساق</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scheduleList.map((c, idx) => (
+              <tr key={idx} className="border-b">
+                <td className="border p-2 font-mono font-bold">{c.courseNumber}</td>
+                <td className="border p-2 font-bold">{c.courseName}</td>
+                <td className="border p-2 font-mono text-center">{c.section || '1'}</td>
+                <td className="border p-2 text-center">{c.creditHours || 3}</td>
+                <td className="border p-2">{c.days || '—'}</td>
+                <td className="border p-2 font-mono" dir="ltr">{c.time || '—'}</td>
+                <td className="border p-2">{c.room || '—'}</td>
+                <td className="border p-2">{c.instructor || 'هيئة تدريسية'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       {/* Header Metric Overview / Bento Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-primary-container text-on-primary p-space-lg shadow-sm border border-secondary/20">
+      <div className="relative overflow-hidden rounded-xl bg-primary-container text-on-primary p-space-lg shadow-sm border border-secondary/20 no-print">
         <div className="absolute -left-12 -bottom-16 w-64 h-64 rounded-full bg-secondary/15 blur-3xl pointer-events-none"></div>
         <div className="absolute right-1/4 -top-12 w-48 h-48 rounded-full bg-tertiary-fixed/10 blur-2xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
@@ -168,16 +252,26 @@ END:VCALENDAR`;
             <button
               className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-lowest/10 hover:bg-surface-container-lowest/20 text-on-primary px-3 sm:px-space-md py-2.5 rounded-lg transition-all font-label-lg text-xs sm:text-label-lg shadow-sm cursor-pointer"
               onClick={() => window.print()}
+              title="طباعة الجدول الدراسي الأسبوعي أو حفظه كـ PDF رسمي"
             >
               <span className="material-symbols-outlined text-base sm:text-lg">print</span>
-              <span>طباعة الجدول</span>
+              <span>طباعة الجدول (PDF)</span>
+            </button>
+            <button
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-lowest/10 hover:bg-surface-container-lowest/20 text-on-primary px-3 sm:px-space-md py-2.5 rounded-lg transition-all font-label-lg text-xs sm:text-label-lg shadow-sm cursor-pointer"
+              onClick={handleExportCsv}
+              title="تصدير جدول المحاضرات كملف Excel / CSV"
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg text-secondary-container">table_view</span>
+              <span>تصدير Excel</span>
             </button>
             <button
               className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-secondary hover:bg-secondary/90 text-on-secondary px-3 sm:px-space-md py-2.5 rounded-lg transition-all font-label-lg text-xs sm:text-label-lg shadow-sm cursor-pointer"
               onClick={() => setShowExportModal(true)}
+              title="إضافة مواعيد المحاضرات إلى تقويم الهاتف الذكي"
             >
               <span className="material-symbols-outlined text-base sm:text-lg">calendar_add_on</span>
-              <span>إضافة للتقويم (iCal)</span>
+              <span>إضافة للتقويم</span>
             </button>
           </div>
         </div>
@@ -452,6 +546,19 @@ END:VCALENDAR`;
             </p>
             <div className="flex flex-col gap-2">
               <button
+                onClick={handleExportCsv}
+                className="w-full flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors text-right cursor-pointer"
+              >
+                <div className="flex items-center gap-space-sm">
+                  <span className="material-symbols-outlined text-secondary">table_view</span>
+                  <div className="flex flex-col">
+                    <span className="font-headline-sm text-headline-sm text-on-surface">ملف إكسل (Microsoft Excel / CSV)</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant">تحميل جدول الشعب والقاعات والمواعيد كجدول بيانات</span>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant">download</span>
+              </button>
+              <button
                 onClick={triggerDownloadICal}
                 className="w-full flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors text-right cursor-pointer"
               >
@@ -491,6 +598,9 @@ END:VCALENDAR`;
           </div>
         </div>
       )}
+
+      {/* تذييل الطباعة الرسمي للجامعة */}
+      <PrintFooter />
     </div>
   );
 }

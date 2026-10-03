@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MutahClient } from '@/lib/upstream/client';
 import { getSession } from '@/lib/session';
 import { LoginRequestSchema } from '@/lib/schemas/auth.schema';
+import { ServerCache } from '@/lib/server-cache';
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,9 +50,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // مسح الكاش بالكامل عند كل تسجيل دخول جديد لمنع تسرب بيانات الطالب السابق
+    ServerCache.clearAll();
+
     // حفظ الجلسة مشفرة في iron-session (httpOnly Cookie)
     session.isLoggedIn = true;
     session.studentId = studentId;
+    session.studentName = undefined; // مسح اسم الطالب السابق لعدم خلط حسابات الطلاب
     session.cookies = loginResult.cookies;
     session.tempCookies = undefined;
     session.csrfToken = undefined;

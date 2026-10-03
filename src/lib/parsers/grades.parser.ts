@@ -4,7 +4,16 @@ import { TranscriptData, TranscriptDataSchema, SemesterRecord, CourseGrade } fro
 /**
  * دالة نقية لتحليل كشف علامات الطالب من studmarks.jsp بدقة 100%
  */
-export function parseTranscriptHtml(html: string): TranscriptData {
+export interface ParseTranscriptOptions {
+  studentId?: string;
+  studentName?: string;
+  major?: string;
+}
+
+export function parseTranscriptHtml(
+  html: string,
+  options?: ParseTranscriptOptions
+): TranscriptData {
   const $ = cheerio.load(html);
 
   const clean = (text: string) =>
@@ -170,7 +179,10 @@ export function parseTranscriptHtml(html: string): TranscriptData {
 
   // حساب المعدل التراكمي الكلي من آخر فصل مسجل
   const lastSemester = semesters[semesters.length - 1];
-  const overallCumGpa = lastSemester?.cumulativeGpa !== '0.00' ? lastSemester?.cumulativeGpa : '80.73';
+  const overallCumGpa =
+    lastSemester?.cumulativeGpa && lastSemester.cumulativeGpa !== '0.00'
+      ? lastSemester.cumulativeGpa
+      : '0.00';
 
   // حساب إجمالي الساعات المجتازة
   let totalPassed = 0;
@@ -182,12 +194,43 @@ export function parseTranscriptHtml(html: string): TranscriptData {
     });
   });
 
+  // استخراج الرقم الجامعي واسم الطالب بدقة وبدون قيم ثابتة
+  let studentId = options?.studentId || clean($('.user-id span').text()) || clean($('.user-id').text());
+  if (!studentId) {
+    const idMatch = html.match(/p_stud_num=(\d+)/) || html.match(/stud_num=(\d+)/) || html.match(/(\d{10,14})/);
+    if (idMatch) studentId = idMatch[1];
+  }
+
+  let studentName = options?.studentName || clean($('.user-name').text()) || clean($('.user-profile .user-name').text());
+  if (!studentName) {
+    const nameMatch = html.match(/stud_name=([^&"']+)/);
+    if (nameMatch) {
+      try {
+        studentName = decodeURIComponent(nameMatch[1].replace(/\+/g, ' '));
+      } catch {
+        studentName = nameMatch[1];
+      }
+    }
+  }
+
+  let major = options?.major || '';
+  if (!major) {
+    const collegeMatch = html.match(/stud_college=([^&"']+)/);
+    if (collegeMatch) {
+      try {
+        major = decodeURIComponent(collegeMatch[1].replace(/\+/g, ' '));
+      } catch {
+        major = collegeMatch[1];
+      }
+    }
+  }
+
   const transcript = {
-    studentId: clean($('.user-id').text()) || '120242222083',
-    studentName: clean($('.user-name').text()) || 'عباده سالم موسى الخمايسه',
-    major: 'علم البيانات والذكاء الاصطناعي',
-    cumulativeGpa: overallCumGpa || '0.00',
-    totalPassedHours: totalPassed > 0 ? totalPassed : 86,
+    studentId: studentId || '',
+    studentName: studentName || '',
+    major: major || 'جامعة مؤتة',
+    cumulativeGpa: overallCumGpa,
+    totalPassedHours: totalPassed,
     semesters,
   };
 

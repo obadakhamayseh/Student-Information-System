@@ -24,7 +24,16 @@ export async function GET() {
       await session.save();
     }
 
-    const data = parseExpandSectionHtml(html);
+    const data = parseExpandSectionHtml(html, {
+      studentId: session.studentId,
+      studentName: session.studentName,
+    });
+
+    if (data.studentName && (!session.studentName || session.studentName !== data.studentName)) {
+      session.studentName = data.studentName;
+      await session.save();
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     if (error instanceof SessionExpiredError) {

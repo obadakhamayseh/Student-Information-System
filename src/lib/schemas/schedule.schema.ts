@@ -32,6 +32,9 @@ export const ScheduleDataSchema = z.object({
   totalRegisteredHours: z.number().default(0),
   weeklySchedule: z.array(WeeklyScheduleItemSchema).default([]),
   exams: z.array(ExamItemSchema).default([]),
+  studentId: z.string().optional(),
+  studentName: z.string().optional(),
+  major: z.string().optional(),
 });
 
 export type ScheduleData = z.infer<typeof ScheduleDataSchema>;

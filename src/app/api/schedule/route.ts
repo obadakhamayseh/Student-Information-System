@@ -53,6 +53,9 @@ export async function GET(request: Request) {
       totalRegisteredHours: dashData.registeredHours || 0,
       weeklySchedule,
       exams: [],
+      studentId: session.studentId,
+      studentName: session.studentName || dashData.studentName,
+      major: dashData.major,
     };
 
     ServerCache.set(ServerCache.key(studentId, 'schedule'), responseData, CACHE_TTL.SCHEDULE);

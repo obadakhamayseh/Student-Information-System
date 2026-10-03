@@ -6,10 +6,11 @@ import { ServerCache } from '@/lib/server-cache';
 export async function POST() {
   const session = await getSession();
 
-  // حذف بيانات الكاش الخاصة بهذا الطالب فوراً عند تسجيل الخروج
+  // حذف بيانات الكاش بالكامل فوراً عند تسجيل الخروج
   if (session.studentId) {
     ServerCache.invalidateSession(session.studentId);
   }
+  ServerCache.clearAll();
 
   // إرسال طلب تسجيل الخروج وإبطال الجلسة في خادم الجامعة الأصلي
   if (session.cookies) {

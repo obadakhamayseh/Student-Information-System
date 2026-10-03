@@ -36,7 +36,44 @@ export async function GET(request: Request) {
       await session.save();
     }
 
-    const data = parseStudyPlanHtml(html);
+    // جلب المواد المسجلة الحالية من كاش لوحة التحكم أو الجدول لتحديدها في الخطة بدقة
+    const dashCache = ServerCache.get<any>(ServerCache.key(studentId, 'dashboard'));
+    const schedCache = ServerCache.get<any>(ServerCache.key(studentId, 'schedule'));
+    let registeredCourseCodes = (dashCache?.courses || schedCache?.weeklySchedule || [])
+      .map((c: any) => c.courseNumber)
+      .filter(Boolean);
+    let majorFromDash = dashCache?.major;
+
+    // إذا لم تكن مساقات الفصل الحالي محفوظة في الكاش، نجلب dashboard سريعاً لمعرفة المساقات المسجلة حالياً
+    if (registeredCourseCodes.length === 0 && session.cookies) {
+      try {
+        const { parseDashboardHtml } = await import('@/lib/parsers/dashboard.parser');
+        const dashRes = await MutahClient.fetchProtectedPage('dashboard.jsp', session.cookies);
+        if (dashRes.html) {
+          const dashData = parseDashboardHtml(dashRes.html);
+          if (dashData.courses && dashData.courses.length > 0) {
+            registeredCourseCodes = dashData.courses.map((c: any) => c.courseNumber).filter(Boolean);
+          }
+          if (dashData.major) {
+            majorFromDash = dashData.major;
+          }
+          ServerCache.set(ServerCache.key(studentId, 'dashboard'), dashData, CACHE_TTL.DASHBOARD);
+        }
+      } catch (err) {
+        console.warn('[PLAN] Could not prefetch dashboard for registered courses:', err);
+      }
+    }
+
+    const data = parseStudyPlanHtml(html, {
+      registeredCourseCodes: registeredCourseCodes.length > 0 ? registeredCourseCodes : undefined,
+      majorName: majorFromDash,
+      studentId: session.studentId,
+      studentName: session.studentName,
+    });
+
+    if (dashCache?.currentSemester) {
+      data.currentSemester = dashCache.currentSemester;
+    }
 
     ServerCache.set(ServerCache.key(studentId, 'plan'), data, CACHE_TTL.PLAN);
 

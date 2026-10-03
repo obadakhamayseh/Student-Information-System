@@ -216,7 +216,7 @@ export default function RegistPlanPage() {
             <span>تصفح شجرة الخطة لاختيار الشعب المتاحة وإضافتها أو سحبها مباشرة</span>
             <span>•</span>
             <span className="font-mono text-primary font-bold">
-              المكتملة: {data?.summary.completedCourses || '86 س'} ({data?.summary.progressPercent || '65%'})
+              المكتملة: {data?.summary.completedCourses || '—'} {data?.summary.progressPercent ? `(${data.summary.progressPercent})` : ''}
             </span>
           </p>
         </div>

@@ -309,7 +309,7 @@ export default function RegistrationMenuPage() {
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant flex items-center gap-2 flex-wrap">
             <span className="material-symbols-outlined text-base">domain</span>
-            <span>{data?.college || 'كلية تكنولوجيا المعلومات'}</span>
+            <span>{data?.college || 'جامعة مؤتة'}</span>
             <span>•</span>
             <span className="material-symbols-outlined text-base">person</span>
             <span>{data?.studentName || 'طالب جامعة مؤتة'}</span>
@@ -713,13 +713,13 @@ export default function RegistrationMenuPage() {
                 }}
                 maxLength={7}
                 pattern="[0-9]{7}"
-                placeholder="أدخل 7 أرقام (مثال: 2212351)"
+                placeholder="أدخل 7 أرقام لرقم المادة"
                 required
                 className="w-full bg-surface-container-low border border-surface-container-high focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 font-mono outline-none transition-all"
               />
               <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
                 <span className="material-symbols-outlined text-xs">info</span>
-                <span>مثال لمواد التخصص: 2212351, 2222232, 2222441</span>
+                <span>أدخل رقم المساق المكون من 7 خانات من خطتك الدراسية</span>
               </div>
             </div>
 

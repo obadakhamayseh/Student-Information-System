@@ -36,7 +36,17 @@ export async function GET(request: Request) {
       await session.save();
     }
 
-    const data = parseTranscriptHtml(html);
+    const dashCache = ServerCache.get<any>(ServerCache.key(studentId, 'dashboard'));
+    const data = parseTranscriptHtml(html, {
+      studentId: session.studentId,
+      studentName: session.studentName,
+      major: dashCache?.major,
+    });
+
+    if (data.studentName && (!session.studentName || session.studentName !== data.studentName)) {
+      session.studentName = data.studentName;
+      await session.save();
+    }
 
     ServerCache.set(ServerCache.key(studentId, 'grades'), data, CACHE_TTL.GRADES);
 

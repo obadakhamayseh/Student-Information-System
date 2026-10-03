@@ -164,3 +164,114 @@
 ::-webkit-scrollbar {
   display: none;
 }
+
+/* ==========================================================================
+   قواعد الطباعة والتصدير كـ PDF الرسمية (Official University Print Styles)
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
+
+  /* إخفاء القوائم، الأشرطة الجانبية، أزرار الموقع، النوافذ المنبثقة، وحقول الإدخال */
+  aside,
+  header,
+  nav,
+  button,
+  input,
+  select,
+  .no-print,
+  .fixed,
+  .toast,
+  [role="dialog"],
+  .material-symbols-outlined:not(.print-show) {
+    display: none !important;
+  }
+
+  /* إعادة تعيين خلفية وهوامش الصفحة للطباعة الرسمية */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 10pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* إزالة قيود مساحات العمل والتمرير */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    background: transparent !important;
+  }
+
+  .lg\:pr-72 {
+    padding-right: 0 !important;
+  }
+
+  /* تحسين الجداول والبطاقات لتناسب ورق A4 دون انقطاع بالمنتصف */
+  table,
+  tr,
+  td,
+  th,
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* تنسيق الجداول الرسمية */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 12px !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #d1d5db !important;
+    padding: 6px 8px !important;
+    color: #111827 !important;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    font-weight: bold !important;
+  }
+
+  /* تنظيف بطاقات الفصول والخلفيات الملونة عند الطباعة */
+  .bg-surface-container,
+  .bg-surface-container-low,
+  .bg-surface-container-lowest,
+  .bg-surface-container-high,
+  .bg-surface {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+  }
+
+  .border,
+  .border-surface-container-high\/40,
+  .border-surface-container-high\/50 {
+    border-color: #e5e7eb !important;
+  }
+
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  /* الروابط والنصوص باللون الأسود الواضح */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}

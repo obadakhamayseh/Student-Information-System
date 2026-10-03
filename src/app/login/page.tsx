@@ -163,9 +163,10 @@ export default function LoginPage() {
                   type="text"
                   dir="ltr"
                   inputMode="numeric"
+                  autoComplete="off"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value.replace(/\D/g, ''))}
-                  placeholder="2021102934"
+                  placeholder="الرقم الجامعي..."
                   className="w-full h-11 bg-surface-container-low border border-surface-container-high rounded-xl px-10 text-on-surface text-sm focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all font-mono text-left"
                   required
                 />
@@ -184,6 +185,7 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   dir="ltr"
+                  autoComplete="off"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"

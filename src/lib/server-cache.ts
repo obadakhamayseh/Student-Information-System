@@ -51,7 +51,7 @@ export const ServerCache = {
   },
 
   /**
-   * حذف كل مدخلات جلسة معينة (عند الضغط على زر التحديث)
+   * حذف كل مدخلات جلسة معينة (عند تسجيل الخروج)
    */
   invalidateSession(studentId: string): void {
     for (const key of cache.keys()) {
@@ -59,6 +59,14 @@ export const ServerCache = {
         cache.delete(key);
       }
     }
+  },
+
+  /**
+   * مسح الكاش بالكامل — يُستخدم عند تسجيل دخول طالب جديد
+   * لضمان عدم تسرب بيانات أي طالب سابق
+   */
+  clearAll(): void {
+    cache.clear();
   },
 
   /**

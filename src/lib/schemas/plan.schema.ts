@@ -32,6 +32,9 @@ export const StudyPlanDataSchema = z.object({
   remainingHours: z.number().default(132),
   categories: z.array(PlanCategorySchema).default([]),
   courses: z.array(PlanCourseSchema).default([]),
+  currentSemester: z.string().optional(),
+  studentId: z.string().optional(),
+  studentName: z.string().optional(),
 });
 
 export type StudyPlanData = z.infer<typeof StudyPlanDataSchema>;

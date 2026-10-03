@@ -36,7 +36,15 @@ export async function GET(request: Request) {
       await session.save();
     }
 
-    const data = parseRegMenuHtml(html);
+    const data = parseRegMenuHtml(html, {
+      studentId: session.studentId,
+      studentName: session.studentName,
+    });
+
+    if (data.studentName && (!session.studentName || session.studentName !== data.studentName)) {
+      session.studentName = data.studentName;
+      await session.save();
+    }
 
     if (data.registeredCourses && data.registeredCourses.length > 0) {
       try {

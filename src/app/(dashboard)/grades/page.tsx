@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TranscriptData, SemesterRecord, CourseGrade } from '@/lib/schemas/grades.schema';
+import { exportToCsv } from '@/lib/export-utils';
+import { PrintHeader, PrintFooter } from '@/components/print-header';
 
 export default function GradesPage() {
   const router = useRouter();
@@ -97,13 +99,47 @@ export default function GradesPage() {
     return { letter: gradeStr, cls: 'text-primary bg-surface-container-high' };
   };
 
-  const simulatePdfExport = () => {
-    showToast('تجهيز الملف الرسمي', 'جاري إنشاء وثيقة كشف العلامات الرسمية...', 'picture_as_pdf');
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        window.print();
-      }
-    }, 800);
+  const handlePrintTranscript = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
+
+  const handleExportCsv = () => {
+    if (!data?.semesters || data.semesters.length === 0) {
+      showToast('تنبيه', 'لا توجد بيانات علامات لتصديرها', 'warning');
+      return;
+    }
+
+    const headers = [
+      'الفصل الدراسي',
+      'رقم المقرر',
+      'اسم المقرر',
+      'الساعات المعتمدة',
+      'العلامة',
+      'التقدير',
+      'النقاط',
+    ];
+    const rows: (string | number)[][] = [];
+
+    data.semesters.forEach((sem) => {
+      sem.courses.forEach((c) => {
+        const details = getLetterBadge(c.grade);
+        rows.push([
+          sem.semesterName,
+          c.courseNumber,
+          c.courseName,
+          c.creditHours,
+          c.grade,
+          details.letter,
+          c.points ?? '—',
+        ]);
+      });
+    });
+
+    const filename = `كشف_علامات_${data.studentId || 'طالب_جامعة_مؤتة'}_${new Date().toISOString().slice(0, 10)}.csv`;
+    exportToCsv(filename, headers, rows);
+    showToast('تم التصدير بنجاح', 'تم تحميل ملف كشف العلامات بصيغة Excel / CSV', 'file_download');
   };
 
   if (loading) {
@@ -170,8 +206,23 @@ export default function GradesPage() {
 
   return (
     <div className="flex flex-col w-full">
+      {/* رأس الطباعة الرسمي للجامعة (يظهر فقط عند الطباعة أو حفظ PDF) */}
+      <PrintHeader
+        documentTitle="كشف العلامات الأكاديمي الرسمي"
+        studentName={data?.studentName}
+        studentId={data?.studentId}
+        major={data?.major}
+        academicYear={currentSemester?.semesterName}
+        extraStats={[
+          { label: 'المعدل التراكمي', value: `${cumNum.toFixed(2)}%` },
+          { label: 'الساعات المقطوعة', value: `${data?.totalPassedHours || 0} س.م` },
+          { label: 'التقدير التراكمي', value: cumRating },
+          { label: 'الفصل الدراسي', value: currentSemester?.semesterName || '—' },
+        ]}
+      />
+
       {/* Status & Context Pill Header Strip */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-space-md mb-space-lg">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-space-md mb-space-lg no-print">
         <div className="flex items-center gap-space-sm">
           <div className="w-10 h-10 rounded-xl bg-primary-container text-secondary-container flex items-center justify-center shadow-sm shrink-0">
             <span className="material-symbols-outlined text-2xl">verified</span>
@@ -210,11 +261,20 @@ export default function GradesPage() {
             </span>
           </button>
           <button
-            onClick={simulatePdfExport}
+            onClick={handlePrintTranscript}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-primary hover:bg-primary-container text-on-primary hover:text-primary-fixed px-3 sm:px-space-md py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-xs sm:text-sm font-label-lg"
+            title="طباعة كشف العلامات أو حفظه كـ PDF رسمي"
           >
-            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
-            <span>تصدير كشف رسمي PDF</span>
+            <span className="material-symbols-outlined text-lg">print</span>
+            <span>طباعة / تصدير PDF</span>
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-high hover:bg-surface-variant text-on-surface px-3 sm:px-space-md py-2.5 rounded-lg shadow-sm border border-surface-container-high/50 transition-all duration-200 cursor-pointer text-xs sm:text-sm font-label-lg"
+            title="تصدير السجل الأكاديمي كملف Excel / CSV"
+          >
+            <span className="material-symbols-outlined text-lg text-secondary">table_view</span>
+            <span>تصدير Excel</span>
           </button>
         </div>
       </div>
@@ -362,7 +422,7 @@ export default function GradesPage() {
           <div className="mt-space-md relative z-10 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-xs font-label-sm text-on-primary-container">إجمالي الساعات المجتازة</span>
-              <span className="text-sm font-label-lg font-bold text-on-primary">{totalPassedHours} ساعة من 132</span>
+              <span className="text-sm font-label-lg font-bold text-on-primary">{totalPassedHours} ساعة مجتازة بنجاح</span>
             </div>
             <span className="px-2.5 py-1 rounded-md bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">
               {cumRating}
@@ -638,7 +698,7 @@ export default function GradesPage() {
       </div>
 
       {/* Academic Integrity & Verification Widget */}
-      <div className="w-full bg-primary text-on-primary rounded-xl p-4 sm:p-space-lg shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-md mb-space-lg relative overflow-hidden">
+      <div className="w-full bg-primary text-on-primary rounded-xl p-4 sm:p-space-lg shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-md mb-space-lg relative overflow-hidden no-print">
         <div className="flex items-center gap-3 sm:gap-space-md w-full md:w-auto">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-secondary/20 text-secondary-fixed flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-2xl sm:text-3xl">security_update_good</span>
@@ -659,6 +719,9 @@ export default function GradesPage() {
           </span>
         </div>
       </div>
+
+      {/* تذييل الطباعة الرسمي للجامعة */}
+      <PrintFooter />
 
       {/* Notification Toast */}
       {toast && (

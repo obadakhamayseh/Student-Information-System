@@ -15,34 +15,64 @@ const clean = (text: string) =>
     .replace(/[\r\n\t]+/g, ' ')
     .trim();
 
+export interface ParseRegistrationOptions {
+  studentId?: string;
+  studentName?: string;
+}
+
 /**
  * دالة تحليل قائمة التسجيل الإلكتروني regmenu.jsp
  */
-export function parseRegMenuHtml(html: string): RegMenuData {
+export function parseRegMenuHtml(
+  html: string,
+  options?: ParseRegistrationOptions
+): RegMenuData {
   const $ = cheerio.load(html);
 
   // استخراج بيانات الطالب
-  let studentName = clean($('.user-name').text()) || clean($('.user-profile').text());
+  let studentName =
+    options?.studentName || clean($('.user-name').text()) || clean($('.user-profile').text());
   if (studentName) {
     studentName = studentName.replace(/\d{10,14}/g, '').trim();
   }
 
-  let studentId = clean($('.user-id').text());
+  let studentId = options?.studentId || clean($('.user-id').text());
   if (!studentId) {
-    const idMatch = html.match(/(\d{12})/);
+    const idMatch =
+      html.match(/p_stud_num=(\d+)/) ||
+      html.match(/stud_num=(\d+)/) ||
+      html.match(/(\d{10,14})/);
     if (idMatch) studentId = idMatch[1];
   }
 
-  let college = 'كلية تكنولوجيا المعلومات';
-  let major = 'علم البيانات والذكاء الاصطناعي';
+  let college = 'جامعة مؤتة';
+  let major = 'طالب مسجل';
 
   $('.student-info-badge .info-item').each((_, el) => {
     const t = clean($(el).text());
-    if (t.includes('تكنولوجيا') || t.includes('كلية') || t.includes('علوم') || t.includes('هندسة')) {
+    if (
+      t.includes('تكنولوجيا') ||
+      t.includes('كلية') ||
+      t.includes('علوم') ||
+      t.includes('هندسة') ||
+      t.includes('طب') ||
+      t.includes('آداب')
+    ) {
       college = t.startsWith('كلية') ? t : `كلية ${t}`;
     }
-    if (t.includes('التخصص:') || t.includes('2222')) {
-      major = 'علم البيانات والذكاء الاصطناعي';
+    if (t.includes('التخصص:') || t.includes('التخصص')) {
+      const extracted = t.replace(/.*التخصص:\s*/, '').replace(/.*التخصص\s*/, '').trim();
+      if (extracted === '2222') {
+        major = 'علم البيانات والذكاء الاصطناعي';
+      } else if (extracted === '2211') {
+        major = 'علم الحاسوب';
+      } else if (extracted === '2212') {
+        major = 'هندسة البرمجيات';
+      } else if (extracted === '2214') {
+        major = 'الأمن السيبراني';
+      } else if (extracted) {
+        major = extracted;
+      }
     }
   });
 
@@ -155,8 +185,8 @@ export function parseRegMenuHtml(html: string): RegMenuData {
   const csrfToken = (typeof rawCsrf === 'string' ? rawCsrf : Array.isArray(rawCsrf) ? rawCsrf[0] : '') || '';
 
   return RegMenuDataSchema.parse({
-    studentId: studentId || '120242222083',
-    studentName: studentName || 'عباده سالم موسى الخمايسه',
+    studentId: studentId || '',
+    studentName: studentName || '',
     college,
     major,
     csrfToken,
@@ -168,7 +198,10 @@ export function parseRegMenuHtml(html: string): RegMenuData {
 /**
  * دالة تحليل صفحة تسجيل خطة registplan.jsp
  */
-export function parseRegistPlanHtml(html: string): RegistPlanData {
+export function parseRegistPlanHtml(
+  html: string,
+  options?: ParseRegistrationOptions
+): RegistPlanData {
   const $ = cheerio.load(html);
 
   // 1. رمز الحماية
@@ -176,10 +209,10 @@ export function parseRegistPlanHtml(html: string): RegistPlanData {
   const csrfToken = (typeof rawCsrf === 'string' ? rawCsrf : Array.isArray(rawCsrf) ? rawCsrf[0] : '') || '';
 
   // 2. بطاقات الإحصاءات العلوية
-  let completedCourses = '35/86';
-  let hoursStats = '92/132';
-  let progressPercent = '69%';
-  let registeredCoursesCount = 6;
+  let completedCourses = '';
+  let hoursStats = '';
+  let progressPercent = '';
+  let registeredCoursesCount = 0;
 
   $('.summary-card').each((_, card) => {
     const text = clean($(card).text());
@@ -300,9 +333,31 @@ export function parseRegistPlanHtml(html: string): RegistPlanData {
     }
   });
 
+  if (!completedCourses && allCourses.length > 0) {
+    const completed = allCourses.filter((c) => c.status === 'مكتملة').length;
+    completedCourses = `${completed}/${allCourses.length}`;
+    if (!registeredCoursesCount) {
+      registeredCoursesCount = allCourses.filter((c) => c.status === 'مسجلة').length;
+    }
+    if (!progressPercent) {
+      progressPercent = `${Math.round((completed / allCourses.length) * 100)}%`;
+    }
+  }
+
+  let studentId = options?.studentId || clean($('.user-id span').text()) || clean($('.user-id').text());
+  if (!studentId) {
+    const idMatch =
+      html.match(/p_stud_num=(\d+)/) ||
+      html.match(/stud_num=(\d+)/) ||
+      html.match(/(\d{10,14})/);
+    if (idMatch) studentId = idMatch[1];
+  }
+  let studentName =
+    options?.studentName || clean($('.user-name').text()) || clean($('.user-profile .user-name').text());
+
   return RegistPlanDataSchema.parse({
-    studentId: clean($('.user-id').text()) || '120242222083',
-    studentName: clean($('.user-name').text()) || 'عباده سالم موسى الخمايسه',
+    studentId: studentId || '',
+    studentName: studentName || '',
     csrfToken,
     summary: {
       completedCourses,

@@ -7,33 +7,63 @@ const clean = (text: string) =>
     .replace(/[\r\n\t]+/g, ' ')
     .trim();
 
+export interface ParseExpansionOptions {
+  studentId?: string;
+  studentName?: string;
+}
+
 /**
  * دالة تحليل صفحة طلب توسعة شعبة expandsection.jsp
  */
-export function parseExpandSectionHtml(html: string): ExpandSectionData {
+export function parseExpandSectionHtml(
+  html: string,
+  options?: ParseExpansionOptions
+): ExpandSectionData {
   const $ = cheerio.load(html);
 
   // استخراج بيانات الطالب
-  let studentName = clean($('.user-name').first().text());
+  let studentName =
+    options?.studentName ||
+    clean($('.user-name').first().text()) ||
+    clean($('.user-profile .user-name').first().text());
   if (!studentName) {
     $('.student-info-badge .info-item').each((_, el) => {
       const t = clean($(el).text());
-      if (!t.includes('تكنولوجيا') && !t.includes('كلية') && t.length > 5) {
+      if (
+        !t.includes('تكنولوجيا') &&
+        !t.includes('كلية') &&
+        t.length > 5 &&
+        !t.includes('التخصص') &&
+        !t.includes('الخطة')
+      ) {
         studentName = t;
       }
     });
   }
 
-  let studentId = clean($('.user-id span').first().text()) || clean($('.user-id').first().text());
+  let studentId =
+    options?.studentId ||
+    clean($('.user-id span').first().text()) ||
+    clean($('.user-id').first().text());
   if (!studentId) {
-    const idMatch = html.match(/(\d{12})/);
+    const idMatch =
+      html.match(/p_stud_num=(\d+)/) ||
+      html.match(/stud_num=(\d+)/) ||
+      html.match(/(\d{10,14})/);
     if (idMatch) studentId = idMatch[1];
   }
 
-  let college = 'كلية تكنولوجيا المعلومات';
+  let college = 'جامعة مؤتة';
   $('.student-info-badge .info-item').each((_, el) => {
     const t = clean($(el).text());
-    if (t.includes('تكنولوجيا') || t.includes('كلية') || t.includes('علوم') || t.includes('هندسة')) {
+    if (
+      t.includes('تكنولوجيا') ||
+      t.includes('كلية') ||
+      t.includes('علوم') ||
+      t.includes('هندسة') ||
+      t.includes('طب') ||
+      t.includes('آداب')
+    ) {
       college = t.startsWith('كلية') ? t : `كلية ${t}`;
     }
   });
@@ -86,8 +116,8 @@ export function parseExpandSectionHtml(html: string): ExpandSectionData {
   });
 
   return ExpandSectionDataSchema.parse({
-    studentId: studentId || '120242222083',
-    studentName: studentName || 'عباده سالم موسى الخمايسه',
+    studentId: studentId || '',
+    studentName: studentName || '',
     college,
     csrfToken,
     alertMessage: alertMessage || undefined,
