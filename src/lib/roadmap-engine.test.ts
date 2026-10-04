@@ -18,19 +18,20 @@ describe('Graduation Roadmap Engine', () => {
       maxSummerHours: 9,
     });
 
-    expect(roadmap.totalRemainingHours).toBe(46);
+    expect(roadmap.totalRemainingHours).toBe(30); // 30 ساعة متبقية للتسجيل بعد احتساب الفصل الحالي المسجل (16 س.م)
+    expect(roadmap.grossRemainingHours).toBe(46); // 46 ساعة إجمالياً قبل احتساب الفصل الحالي كمنجز
     expect(roadmap.completedHours).toBe(86);
     expect(roadmap.currentRegisteredHours).toBe(16);
     expect(roadmap.totalDegreeHours).toBe(132);
-    // التحقق الرياضي الحاسم: المنجز (86) + المتبقي (46) = مجموع الدرجة (132)
-    expect(roadmap.completedHours + roadmap.totalRemainingHours).toBe(roadmap.totalDegreeHours);
+    // التحقق الرياضي الحاسم: المنجز (86) + المسجل حالياً (16) + المتبقي للتسجيل (30) = مجموع الدرجة (132)
+    expect(roadmap.completedHours + roadmap.currentRegisteredHours + roadmap.totalRemainingHours).toBe(roadmap.totalDegreeHours);
 
-    // التحقق من حصص الفئات بدون احتساب الفصل الحالي كمنجز
+    // التحقق من حصص الفئات المتبقية للتسجيل بعد خصم الفصل الحالي
     expect(roadmap.stats.uniCompulsoryRemaining).toBe(6);
     expect(roadmap.stats.uniElectiveRemaining).toBe(0); // مكتملة 3/3 في الأقسام الثلاثة
-    expect(roadmap.stats.majorCompulsoryRemaining).toBe(31); // 13 س.م قيد الدراسة + 18 س.م فصول قادمة
+    expect(roadmap.stats.majorCompulsoryRemaining).toBe(18); // 18 س.م فصول قادمة (بعد خصم 13 س.م قيد الدراسة حالياً)
     expect(roadmap.stats.majorElectiveRemaining).toBe(6); // مادتين فقط وليس 11 مادة
-    expect(roadmap.stats.collegeCompulsoryRemaining).toBe(3); // 3 س.م هندسة برمجيات 1 قيد الدراسة
+    expect(roadmap.stats.collegeCompulsoryRemaining).toBe(0); // مكتمل بالفصل الحالي (المادة مسجلة حالياً بـ 3 س.م)
     expect(roadmap.stats.remedialRemaining).toBe(0); // مهارات حاسوب 99 معفى لاجتياز امتحان المستوى 2200096
 
     // متطلب 00 مكتمل

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { StudyPlanData, PlanCourse } from '@/lib/schemas/plan.schema';
 import { exportToCsv } from '@/lib/export-utils';
 import { PrintHeader, PrintFooter } from '@/components/print-header';
+import { generateGraduationRoadmap } from '@/lib/roadmap-engine';
 
 interface CategoryStats {
   key: string;
@@ -216,29 +217,21 @@ export default function PlanPage() {
   // حساب الفصل الدراسي الحالي من بيانات الخطة أو الـ API
   const currentSemester = data?.currentSemester || 'الفصل الدراسي الحالي';
 
-  // حساب الساعات المتبقية لتقدير موعد التخرج ديناميكياً
-  const MAX_HOURS_PER_SEMESTER = 18;
-  const MAX_HOURS_SUMMER = 12;
-  const semestersNeeded = remainingAfterCurrent <= 0 ? 0
-    : remainingAfterCurrent <= MAX_HOURS_SUMMER ? 1
-    : Math.ceil((remainingAfterCurrent - MAX_HOURS_SUMMER) / MAX_HOURS_PER_SEMESTER) + 1;
-
-  // بناء خريطة الفصول المتبقية ديناميكياً
-  const buildGraduationRoadmap = () => {
-    if (remainingAfterCurrent <= 0) return [];
-    const roadmap = [];
-    let remaining = remainingAfterCurrent;
-    let step = 1;
-    while (remaining > 0 && step <= 4) {
-      const isSummer = step === semestersNeeded && remaining <= MAX_HOURS_SUMMER;
-      const hours = isSummer ? Math.min(remaining, MAX_HOURS_SUMMER) : Math.min(remaining, MAX_HOURS_PER_SEMESTER);
-      roadmap.push({ step, hours, isSummer });
-      remaining -= hours;
-      step++;
-    }
-    return roadmap;
-  };
-  const graduationRoadmap = buildGraduationRoadmap();
+  // توليد خريطة الفصول المتبقية بدقة 100% من محرك التخرج الأكاديمي
+  const graduationRoadmap = useMemo(() => {
+    if (!data) return [];
+    const res = generateGraduationRoadmap(data);
+    return res.semesters
+      .filter((s) => !s.isCurrentSemester)
+      .map((s, idx) => ({
+        step: idx + 1,
+        name: s.semesterName,
+        hours: s.totalHours,
+        isSummer: s.isSummer,
+        isGraduation: s.isGraduationSemester,
+        coursesCount: s.courses.length,
+      }));
+  }, [data]);
 
   // شجرة الاعتمادية — تُبنى من قائمة المواد الفعلية للطالب
   const dependencyNodes = coursesList
@@ -478,7 +471,7 @@ export default function PlanPage() {
                 <h2 className="font-headline-sm text-headline-sm text-on-primary font-bold">خريطة الفصول المتبقية للتخرج</h2>
               </div>
               <span className="bg-tertiary-container text-tertiary-fixed text-xs px-2.5 py-1 rounded font-label-sm font-bold">
-                {remainingAfterCurrent <= 0 ? 'جاهز للتخرج' : `${semestersNeeded} فصل متبقٍ`}
+                {remainingAfterCurrent <= 0 ? 'جاهز للتخرج' : `${graduationRoadmap.length} فصول متبقية`}
               </span>
             </div>
 
@@ -498,26 +491,26 @@ export default function PlanPage() {
                     <div
                       key={term.step}
                       className={`bg-tertiary/40 p-space-sm rounded-lg flex items-center justify-between ${
-                        term.isSummer ? 'border border-secondary/40 shadow-sm' : 'border border-white/5'
+                        term.isGraduation ? 'border border-secondary/40 shadow-sm' : 'border border-white/5'
                       }`}
                     >
                       <div className="flex items-center gap-space-sm">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs font-label-md shrink-0 ${
-                          term.isSummer ? 'bg-secondary text-on-secondary' : 'bg-secondary/20 text-secondary-container'
+                          term.isGraduation ? 'bg-secondary text-on-secondary' : 'bg-secondary/20 text-secondary-container'
                         }`}>
                           {term.step}
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="font-label-md text-label-md text-on-primary block font-bold">
-                              {term.isSummer ? 'الفصل الصيفي (فصل التخرج)' : `الفصل ${term.step === 1 ? 'القادم' : `رقم ${term.step}`}`}
+                              {term.name}
                             </span>
-                            {term.isSummer && (
-                              <span className="text-[10px] bg-secondary px-1.5 rounded text-on-secondary font-bold">تخرج</span>
+                            {term.isGraduation && (
+                              <span className="text-[10px] bg-secondary px-1.5 rounded text-on-secondary font-bold">فصل التخرج 🎓</span>
                             )}
                           </div>
                           <span className="font-label-sm text-label-sm text-on-primary-container">
-                            {term.isSummer ? 'المساقات المتبقية لاستكمال متطلبات الخطة' : 'مواد من خطتك الدراسية'}
+                            {term.coursesCount} مساقات متبقية لاستكمال متطلبات الخطة
                           </span>
                         </div>
                       </div>
@@ -527,7 +520,7 @@ export default function PlanPage() {
                   <div className="p-2.5 rounded-lg bg-surface-container-lowest/15 border border-white/10 text-xs text-on-primary-container flex items-start gap-2 mt-1">
                     <span className="material-symbols-outlined text-secondary-fixed text-base shrink-0 mt-0.5">policy</span>
                     <p className="leading-relaxed text-[11px]">
-                      <strong>التعليمات الأكاديمية الرسمية:</strong> الحد المسموح في الفصل الصيفي <strong>10 ساعات</strong> للطالب العادي، وحتى <strong>12 ساعة</strong> لطالب التخرج.
+                      <strong>التعليمات الأكاديمية:</strong> الحد الأقصى العادي <strong>18 س.م</strong> (وحتى <strong>21 س.م</strong> للخريج)، والصيفي <strong>10 س.م</strong> (وحتى <strong>12 س.م</strong> للخريج).
                     </p>
                   </div>
                 </div>

@@ -48,6 +48,7 @@ export interface RoadmapCategorySummary {
   completedHours: number;
   enrolledHours: number;
   remainingHours: number;
+  grossRemainingHours?: number;
   status: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي';
   isCompulsory: boolean;
   isElective: boolean;
@@ -59,20 +60,24 @@ export interface RoadmapCategorySummary {
 export interface RoadmapResult {
   semesters: RoadmapSemester[];
   totalRemainingHours: number;
+  grossRemainingHours: number;
   completedHours: number;
   currentRegisteredHours: number;
   totalDegreeHours: number;
   semestersCount: number;
+  futureSemestersCount: number;
   estimatedGraduationSemester: string;
   isCompleted: boolean;
   criticalPathCourses: PlannedCourseItem[];
   progressPercent: number;
   stats: {
     majorCompulsoryRemaining: number;
+    majorCompulsoryGross?: number;
     majorElectiveRemaining: number;
     uniCompulsoryRemaining: number;
     uniElectiveRemaining: number;
     collegeCompulsoryRemaining: number;
+    collegeCompulsoryGross?: number;
     remedialRemaining: number;
   };
   categoriesSummary: RoadmapCategorySummary[];
@@ -190,12 +195,23 @@ export function generateGraduationRoadmap(
   const scheduledDegreePool: PlannedCourseItem[] = [];
   const remedialPool: PlannedCourseItem[] = [];
 
-  const stats = {
+  const stats: {
+    majorCompulsoryRemaining: number;
+    majorCompulsoryGross?: number;
+    majorElectiveRemaining: number;
+    uniCompulsoryRemaining: number;
+    uniElectiveRemaining: number;
+    collegeCompulsoryRemaining: number;
+    collegeCompulsoryGross?: number;
+    remedialRemaining: number;
+  } = {
     majorCompulsoryRemaining: 0,
+    majorCompulsoryGross: 0,
     majorElectiveRemaining: 0,
     uniCompulsoryRemaining: 0,
     uniElectiveRemaining: 0,
     collegeCompulsoryRemaining: 0,
+    collegeCompulsoryGross: 0,
     remedialRemaining: 0,
   };
 
@@ -312,18 +328,28 @@ export function generateGraduationRoadmap(
         catName.includes('اختيارية');
 
       if (isCompulsory) {
-        // متطلب إجباري: نعتمد حصراً على ساعات تصنيف المتطلب الأكاديمي والمنجز الفعلي (دون احتساب الفصل الحالي كمنجز)
+        // متطلب إجباري: حساب الساعات المتبقية الإجمالية والساعات المطلوبة للتسجيل بعد خصم الفصل الحالي
         const catRemainingHours = Math.max(0, catReq - catComp);
+        const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
 
-        totalRemainingHours += catRemainingHours;
+        totalRemainingHours += unstudiedNeededHours;
 
         if (catName.includes('جامع')) {
-          stats.uniCompulsoryRemaining += catRemainingHours;
+          stats.uniCompulsoryRemaining += unstudiedNeededHours;
         } else if (catName.includes('كلي')) {
-          stats.collegeCompulsoryRemaining += catRemainingHours;
+          stats.collegeCompulsoryRemaining += unstudiedNeededHours;
+          stats.collegeCompulsoryGross = (stats.collegeCompulsoryGross || 0) + catRemainingHours;
         } else {
-          stats.majorCompulsoryRemaining += catRemainingHours;
+          stats.majorCompulsoryRemaining += unstudiedNeededHours;
+          stats.majorCompulsoryGross = (stats.majorCompulsoryGross || 0) + catRemainingHours;
         }
+
+        const catStatus: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي' =
+          catComp >= catReq
+            ? 'مكتمل'
+            : unstudiedNeededHours === 0
+            ? 'مكتمل بالفصل الحالي'
+            : 'متبقي';
 
         categoriesSummary.push({
           categoryId: catId,
@@ -331,8 +357,9 @@ export function generateGraduationRoadmap(
           requiredHours: catReq,
           completedHours: catComp,
           enrolledHours: enrolledHoursInCat,
-          remainingHours: catRemainingHours,
-          status: catRemainingHours === 0 ? 'مكتمل' : 'متبقي',
+          remainingHours: unstudiedNeededHours,
+          grossRemainingHours: catRemainingHours,
+          status: catStatus,
           isCompulsory: true,
           isElective: false,
           isRemedial: false,
@@ -341,9 +368,6 @@ export function generateGraduationRoadmap(
         });
 
         // الساعات المطلوبة من المقررات غير المسجلة وغير المنجزة (المتبقية) لجدولتها بالفصول القادمة
-        // لأن المساقات المسجلة حالياً ستُدرج بالفصل الحالي
-        const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
-
         if (unstudiedNeededHours > 0) {
           const unstudiedCourses = catCourses.filter((c) => c.status === 'متبقية');
 
@@ -414,16 +438,24 @@ export function generateGraduationRoadmap(
           }
         }
       } else if (isElective) {
-        // متطلب اختياري: نحسب بدقة الساعات الناقصة من واقع المطلوب والمنجز الفعلي فقط
+        // متطلب اختياري: نحسب بدقة الساعات الناقصة بعد احتساب المنجز والمسجل حالياً
         const catRemainingHours = Math.max(0, catReq - catComp);
+        const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
 
-        totalRemainingHours += catRemainingHours;
+        totalRemainingHours += unstudiedNeededHours;
 
         if (catName.includes('جامع')) {
-          stats.uniElectiveRemaining += catRemainingHours;
+          stats.uniElectiveRemaining += unstudiedNeededHours;
         } else {
-          stats.majorElectiveRemaining += catRemainingHours;
+          stats.majorElectiveRemaining += unstudiedNeededHours;
         }
+
+        const catStatus: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي' =
+          catComp >= catReq
+            ? 'مكتمل'
+            : unstudiedNeededHours === 0
+            ? 'مكتمل بالفصل الحالي'
+            : 'متبقي';
 
         categoriesSummary.push({
           categoryId: catId,
@@ -431,8 +463,9 @@ export function generateGraduationRoadmap(
           requiredHours: catReq,
           completedHours: catComp,
           enrolledHours: enrolledHoursInCat,
-          remainingHours: catRemainingHours,
-          status: catRemainingHours === 0 ? 'مكتمل' : 'متبقي',
+          remainingHours: unstudiedNeededHours,
+          grossRemainingHours: catRemainingHours,
+          status: catStatus,
           isCompulsory: false,
           isElective: true,
           isRemedial: false,
@@ -441,8 +474,6 @@ export function generateGraduationRoadmap(
         });
 
         // الساعات المطلوبة من المقررات الاختيارية غير المسجلة حالياً
-        const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
-
         if (unstudiedNeededHours > 0) {
           const unstudiedElectives = catCourses.filter((c) => c.status === 'متبقية');
           let accumulatedHours = 0;
@@ -490,7 +521,15 @@ export function generateGraduationRoadmap(
       } else {
         // فئة عامة أخرى
         const catRemainingHours = Math.max(0, catReq - catComp);
-        totalRemainingHours += catRemainingHours;
+        const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
+        totalRemainingHours += unstudiedNeededHours;
+
+        const catStatus: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي' =
+          catComp >= catReq
+            ? 'مكتمل'
+            : unstudiedNeededHours === 0
+            ? 'مكتمل بالفصل الحالي'
+            : 'متبقي';
 
         categoriesSummary.push({
           categoryId: catId,
@@ -498,8 +537,9 @@ export function generateGraduationRoadmap(
           requiredHours: catReq,
           completedHours: catComp,
           enrolledHours: enrolledHoursInCat,
-          remainingHours: catRemainingHours,
-          status: catRemainingHours === 0 ? 'مكتمل' : 'متبقي',
+          remainingHours: unstudiedNeededHours,
+          grossRemainingHours: catRemainingHours,
+          status: catStatus,
           isCompulsory: true,
           isElective: false,
           isRemedial: false,
@@ -507,7 +547,6 @@ export function generateGraduationRoadmap(
           passedCoursesCount: catCourses.filter((c) => c.status === 'منجزة').length,
         });
 
-        const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
         if (unstudiedNeededHours > 0) {
           const unstudied = catCourses.filter((c) => c.status === 'متبقية');
           let acc = 0;
@@ -584,10 +623,12 @@ export function generateGraduationRoadmap(
     return {
       semesters: [],
       totalRemainingHours: 0,
+      grossRemainingHours: 0,
       completedHours: completedDegreeHours,
       currentRegisteredHours,
       totalDegreeHours,
       semestersCount: 0,
+      futureSemestersCount: 0,
       estimatedGraduationSemester: 'مؤهل للتخرج حالياً 🎉',
       isCompleted: true,
       criticalPathCourses: [],
@@ -1014,13 +1055,19 @@ export function generateGraduationRoadmap(
         )
       : 0;
 
+  const grossRemainingHours = Math.max(0, totalDegreeHours - completedDegreeHours);
+  const futureSemesters = semesters.filter((s) => !s.isCurrentSemester);
+  const futureSemestersCount = futureSemesters.length;
+
   return {
     semesters,
     totalRemainingHours,
+    grossRemainingHours,
     completedHours: completedDegreeHours,
     currentRegisteredHours,
     totalDegreeHours,
     semestersCount: semesters.length,
+    futureSemestersCount,
     estimatedGraduationSemester,
     isCompleted: false,
     criticalPathCourses,

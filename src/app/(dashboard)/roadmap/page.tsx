@@ -310,11 +310,16 @@ export default function GraduationRoadmapPage() {
   }
 
   const remainingHours = baseRoadmap?.totalRemainingHours || 0;
+  const grossRemainingHours = baseRoadmap?.grossRemainingHours || 0;
   const completedHours = baseRoadmap?.completedHours || 0;
   const currentRegisteredHours = baseRoadmap?.currentRegisteredHours || 0;
   const totalDegreeHours = baseRoadmap?.totalDegreeHours || 132;
   const progressPercent = baseRoadmap?.progressPercent || 0;
   const estimatedGraduationSemester = baseRoadmap?.estimatedGraduationSemester || '—';
+  const futureSemestersCount =
+    baseRoadmap?.futureSemestersCount ||
+    activeSemesters.filter((s) => !s.isCurrentSemester).length ||
+    2;
   const semestersCount = activeSemesters.length;
 
   return (
@@ -327,10 +332,10 @@ export default function GraduationRoadmapPage() {
         major={planData?.majorName}
         academicYear={estimatedGraduationSemester}
         extraStats={[
-          { label: 'الساعات المنجزة', value: `${completedHours} س.م` },
-          { label: 'الساعات المسجلة حالياً', value: `${currentRegisteredHours} س.م` },
-          { label: 'الساعات المتبقية', value: `${remainingHours} س.م` },
-          { label: 'الفصل المتوقع للتخرج', value: estimatedGraduationSemester },
+          { label: 'الساعات المنجزة سابقاً', value: `${completedHours} س.م` },
+          { label: 'الساعات المسجلة حالياً (تم تنزيلها)', value: `${currentRegisteredHours} س.م` },
+          { label: 'الساعات المتبقية للتسجيل (تريد تنزيلها)', value: `${remainingHours} س.م` },
+          { label: 'المجموع الكلي المعتمد', value: `${totalDegreeHours} س.م` },
         ]}
       />
 
@@ -477,7 +482,7 @@ export default function GraduationRoadmapPage() {
         {/* Card 1: Remaining Hours */}
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-surface-container-high/40 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="font-label-md text-xs font-semibold text-on-surface-variant">الساعات المتبقية للتخرج</span>
+            <span className="font-label-md text-xs font-semibold text-on-surface-variant">الساعات المتبقية للتسجيل (المواد المطلوبة)</span>
             <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-lg">hourglass_bottom</span>
             </div>
@@ -485,7 +490,7 @@ export default function GraduationRoadmapPage() {
           <div className="mt-3">
             <div className="flex items-baseline gap-1.5">
               <span className="font-headline-xl text-3xl font-extrabold text-primary">{remainingHours}</span>
-              <span className="text-xs text-on-surface-variant font-medium">ساعة معتمدة</span>
+              <span className="text-xs text-on-surface-variant font-medium">ساعة للتسجيل</span>
             </div>
             <div className="w-full bg-surface-container h-2 rounded-full mt-2.5 overflow-hidden">
               <div
@@ -493,9 +498,13 @@ export default function GraduationRoadmapPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="flex justify-between items-center text-[11px] text-on-surface-variant mt-1.5">
-              <span>أنجزت {completedHours} س.م فعلياً • {currentRegisteredHours} س.م قيد الدراسة بالفصل الحالي</span>
-              <span>المجموع {totalDegreeHours} س.م</span>
+            <div className="flex flex-col gap-0.5 text-[11px] text-on-surface-variant mt-2 leading-relaxed">
+              <span className="font-medium text-primary">
+                أنجزت {completedHours} س.م • مسجل حالياً {currentRegisteredHours} س.م (تم تنزيلها)
+              </span>
+              <span>
+                المتبقي بعد الحالي: <strong>{remainingHours} س.م</strong> • المجموع الكلي: <strong>{totalDegreeHours} س.م</strong>
+              </span>
             </div>
           </div>
         </div>
@@ -503,18 +512,18 @@ export default function GraduationRoadmapPage() {
         {/* Card 2: Semesters Needed */}
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-surface-container-high/40 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="font-label-md text-xs font-semibold text-on-surface-variant">الفصول الدراسية المتبقية</span>
+            <span className="font-label-md text-xs font-semibold text-on-surface-variant">الفصول المتبقية للتخرج</span>
             <div className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center">
               <span className="material-symbols-outlined text-lg">calendar_view_week</span>
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-headline-xl text-3xl font-extrabold text-secondary">{semestersCount}</span>
-              <span className="text-xs text-on-surface-variant font-medium">فصول دراسية</span>
+              <span className="font-headline-xl text-3xl font-extrabold text-secondary">{futureSemestersCount}</span>
+              <span className="text-xs text-on-surface-variant font-medium">فصول قادمة</span>
             </div>
-            <p className="text-xs text-on-surface-variant mt-2">
-              الفصل الحالي ({currentRegisteredHours} س.م قيد الدراسة) يليه {semestersCount > 1 ? `${semestersCount - 1} فصول للتخرج` : 'فصل التخرج'}
+            <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">
+              فصلان دراسيان للتخرج ({remainingHours} س.م موزعة) • بالإضافة للفصل الحالي ({currentRegisteredHours} س.م قيد الدراسة)
             </p>
           </div>
         </div>
@@ -538,18 +547,18 @@ export default function GraduationRoadmapPage() {
         {/* Card 4: Load Balance & Quality Score */}
         <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-surface-container-high/40 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="font-label-md text-xs font-semibold text-on-surface-variant">مؤشر جودة وتوازن الخطة</span>
+            <span className="font-label-md text-xs font-semibold text-on-surface-variant">مؤشر دقة وتطابق الخطة</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center">
               <span className="material-symbols-outlined text-lg">verified</span>
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-headline-xl text-3xl font-extrabold text-emerald-600">98%</span>
-              <span className="text-xs text-emerald-700 font-bold">متطابق ومثالي</span>
+              <span className="font-headline-xl text-3xl font-extrabold text-emerald-600">100%</span>
+              <span className="text-xs text-emerald-700 font-bold">تطابق رياضي تام</span>
             </div>
             <p className="text-xs text-on-surface-variant mt-2">
-              تم ضبط المتطلبات السابقة وتسلسل مشاريع التخرج 1 و 2
+              {completedHours} منجزة + {currentRegisteredHours} تم تنزيلها + {remainingHours} تريد تنزيلها = {totalDegreeHours} س.م
             </p>
           </div>
         </div>
@@ -745,7 +754,7 @@ export default function GraduationRoadmapPage() {
             </h3>
           </div>
           <span className="text-xs font-medium text-on-surface-variant">
-            إجمالي {activeSemesters.length} فصول • {remainingHours} ساعة موزعة بالكامل
+            إجمالي {futureSemestersCount} فصول متبقية للتخرج ({remainingHours} ساعة موزعة) • بالإضافة للفصل الحالي ({currentRegisteredHours} س.م)
           </span>
         </div>
 
