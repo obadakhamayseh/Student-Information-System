@@ -8,6 +8,7 @@ import {
   RegistPlanCategory,
   AvailableSection,
 } from '@/lib/schemas/registration.schema';
+import { getOfficialCreditHours } from '@/lib/course-catalog';
 
 const clean = (text: string) =>
   (text || '')
@@ -245,7 +246,9 @@ export function parseRegistPlanHtml(
         const rawSub = form.find('input[name="psub_number"]').val();
         const subNumber = (typeof rawSub === 'string' ? rawSub : Array.isArray(rawSub) ? rawSub[0] : '') || clean($(el).find('.course-code').text());
         const courseName = clean($(el).find('.course-name').text()) || clean($(el).find('strong, b').first().text());
-        const hours = clean($(el).find('.course-hours').text()) || '3 س';
+        const rawHoursText = clean($(el).find('.course-hours').text());
+        const exactHours = getOfficialCreditHours(subNumber, courseName, rawHoursText);
+        const hours = `${exactHours} س`;
 
         if (!subNumber || !courseName) return;
 

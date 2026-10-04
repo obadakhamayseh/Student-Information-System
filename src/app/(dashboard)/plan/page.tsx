@@ -764,6 +764,12 @@ export default function PlanPage() {
                               {c.category}
                             </span>
                           </div>
+                          {c.prerequisite && c.prerequisite !== '—' && (
+                            <div className="flex items-center gap-1 text-[11px] text-on-surface-variant mt-1">
+                              <span className="material-symbols-outlined text-[12px] text-secondary">link</span>
+                              <span>المتطلب: {c.prerequisite}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       {/* Grade */}
@@ -854,6 +860,12 @@ export default function PlanPage() {
                                   {c.courseNumber}
                                 </span>
                               </div>
+                              {c.prerequisite && c.prerequisite !== '—' && (
+                                <div className="flex items-center gap-1 text-xs text-on-surface-variant mt-0.5">
+                                  <span className="material-symbols-outlined text-[13px] text-secondary">link</span>
+                                  <span>المتطلب السابق: {c.prerequisite}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

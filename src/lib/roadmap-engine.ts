@@ -1,4 +1,11 @@
 import { PlanCourse, StudyPlanData } from '@/lib/schemas/plan.schema';
+import {
+  getOfficialCreditHours,
+  getOfficialPrerequisite,
+  getOfficialPrerequisiteCode,
+  isCourseCorequisite,
+  normalizeCourseCode,
+} from '@/lib/course-catalog';
 
 export interface PlannedCourseItem extends PlanCourse {
   reason: string;
@@ -159,16 +166,19 @@ export function generateGraduationRoadmap(
   // 1. حساب المساقات والساعات المسجلة حالياً في الفصل الجاري (قيد الدراسة)
   const currentRegistered = allCourses.filter((c) => c.status === 'مسجلة');
   const currentRegisteredHours = currentRegistered.reduce(
-    (sum, c) => sum + (c.creditHours || 3),
+    (sum, c) => sum + getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours),
     0
   );
 
   const currentEnrolledCourses: PlannedCourseItem[] = currentRegistered.map((c) => {
     const level = getCourseLevel(c.courseNumber, c.courseName);
     const difficulty = getCourseDifficulty(level, c.category, c.courseName);
+    const hours = getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours);
+    const prereq = getOfficialPrerequisite(c.courseNumber, c.prerequisite);
     return {
       ...c,
-      creditHours: c.creditHours || 3,
+      creditHours: hours,
+      prerequisite: prereq,
       level,
       difficulty,
       reason: 'مقرر مسجل حالياً في جدولك الدراسي (قيد الدراسة)',
@@ -285,7 +295,7 @@ export function generateGraduationRoadmap(
       const catCourses = cat.courses || [];
       const enrolledInCat = catCourses.filter((c) => c.status === 'مسجلة');
       const enrolledHoursInCat = enrolledInCat.reduce(
-        (sum, c) => sum + (c.creditHours || 3),
+        (sum, c) => sum + getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours),
         0
       );
 
@@ -357,11 +367,9 @@ export function generateGraduationRoadmap(
             return lvlA - lvlB;
           });
 
-          let accumulatedHours = 0;
           for (const c of sortedCompulsory) {
-            if (accumulatedHours >= unstudiedNeededHours) break;
-            const hours = c.creditHours || 3;
-            accumulatedHours += hours;
+            const hours = getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours);
+            const prereq = getOfficialPrerequisite(c.courseNumber, c.prerequisite);
 
             const level = getCourseLevel(c.courseNumber, c.courseName);
             const difficulty = getCourseDifficulty(level, c.category, c.courseName);
@@ -396,6 +404,7 @@ export function generateGraduationRoadmap(
             scheduledDegreePool.push({
               ...c,
               creditHours: hours,
+              prerequisite: prereq,
               level,
               difficulty,
               reason,
@@ -447,7 +456,11 @@ export function generateGraduationRoadmap(
 
           for (const electiveCourse of sortedElectives) {
             if (accumulatedHours >= unstudiedNeededHours) break;
-            const hours = electiveCourse.creditHours || 3;
+            const hours = getOfficialCreditHours(
+              electiveCourse.courseNumber,
+              electiveCourse.courseName,
+              electiveCourse.creditHours
+            );
             accumulatedHours += hours;
 
             const level = getCourseLevel(electiveCourse.courseNumber, electiveCourse.courseName);
@@ -456,10 +469,15 @@ export function generateGraduationRoadmap(
               electiveCourse.category,
               electiveCourse.courseName
             );
+            const prereq = getOfficialPrerequisite(
+              electiveCourse.courseNumber,
+              electiveCourse.prerequisite
+            );
 
             scheduledDegreePool.push({
               ...electiveCourse,
               creditHours: hours,
+              prerequisite: prereq,
               level,
               difficulty,
               reason: `مساق اختياري مقترح لاستيفاء متطلب (${catName}) - خيار استرشادي يمكن استبداله`,
@@ -522,16 +540,21 @@ export function generateGraduationRoadmap(
     );
 
     totalRemainingHours = remainingCourses.reduce(
-      (sum, c) => sum + (c.creditHours || 3),
+      (sum, c) =>
+        sum + getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours),
       0
     );
 
     remainingCourses.forEach((c) => {
       const level = getCourseLevel(c.courseNumber, c.courseName);
+      const hours = getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours);
+      const prereq = getOfficialPrerequisite(c.courseNumber, c.prerequisite);
+
       if (level === 0 || c.category.includes('استدراكي')) {
         remedialPool.push({
           ...c,
           creditHours: 0,
+          prerequisite: prereq,
           level: 0,
           difficulty: 'سهل',
           reason: 'مقرر استدراكي إجباري يجب تسجيله بأول فصل دراسي',
@@ -541,6 +564,8 @@ export function generateGraduationRoadmap(
       } else {
         scheduledDegreePool.push({
           ...c,
+          creditHours: hours,
+          prerequisite: prereq,
           level,
           difficulty: getCourseDifficulty(level, c.category, c.courseName),
           reason: 'متطلب خطة دراسية',
@@ -619,6 +644,19 @@ export function generateGraduationRoadmap(
   // 5. محاكي وتوزيع الفصول الدراسية بدقة
   const semesters: RoadmapSemester[] = [];
 
+  // تتبع المقررات المنجزة أكاديمياً لفتح المتطلبات السابقة
+  const completedCourseCodes = new Set<string>();
+  allCourses
+    .filter((c) => c.status === 'منجزة')
+    .forEach((c) => {
+      completedCourseCodes.add(normalizeCourseCode(c.courseNumber));
+    });
+  // امتحانات المستوى والمقررات الاستدراكية المعفاة
+  completedCourseCodes.add('1801096');
+  completedCourseCodes.add('1802096');
+  completedCourseCodes.add('2200096');
+  completedCourseCodes.add('2200099');
+
   // إذا كان الطالب مسجلاً في مقررات بالفصل الحالي (قيد الدراسة - غير محسوبة كمنجزة بعد)
   if (currentEnrolledCourses.length > 0) {
     const curSemName = planData.currentSemester
@@ -638,6 +676,11 @@ export function generateGraduationRoadmap(
       courses: currentEnrolledCourses,
       workloadStatus: 'الفصل الحالي (قيد الدراسة)',
       workloadColor: 'blue',
+    });
+
+    // عند اجتياز الفصل الحالي، تصبح هذه المساقات منجزة ومفتوحة كمتطلبات سابقة للفصول القادمة
+    currentEnrolledCourses.forEach((c) => {
+      completedCourseCodes.add(normalizeCourseCode(c.courseNumber));
     });
   }
 
@@ -669,7 +712,11 @@ export function generateGraduationRoadmap(
 
     // حساب الساعات المتبقية الإجمالية في الحوض
     const remainingInPoolHours =
-      pool.reduce((s, c) => s + (c.creditHours || 3), 0) +
+      pool.reduce(
+        (s, c) =>
+          s + getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours),
+        0
+      ) +
       (proj1Course ? proj1Course.creditHours || 1 : 0) +
       (proj2Course ? proj2Course.creditHours || 2 : 0) +
       remedialPool.reduce((s, c) => s + (c.creditHours || 0), 0);
@@ -741,11 +788,42 @@ export function generateGraduationRoadmap(
       proj1Course = null;
     }
 
-    // تعبئة مساقات الفصل حتى الحد المستهدف والحد الأقصى الصارم
+    // تعبئة مساقات الفصل حتى الحد المستهدف والحد الأقصى الصارم مع التحقق من المتطلب السابق
     let i = 0;
     while (i < pool.length) {
       const candidate = pool[i];
-      const hours = candidate.creditHours || 3;
+      const hours = getOfficialCreditHours(
+        candidate.courseNumber,
+        candidate.courseName,
+        candidate.creditHours
+      );
+
+      // فحص المتطلب السابق الأكاديمي بدقة:
+      const prereqCode = getOfficialPrerequisiteCode(candidate.courseNumber);
+      const isCoreq = isCourseCorequisite(candidate.courseNumber);
+
+      let isPrereqMet = true;
+      if (prereqCode) {
+        const normPrereq = normalizeCourseCode(prereqCode);
+        if (!completedCourseCodes.has(normPrereq)) {
+          // إذا كان متطلب مرافق (أو يرافق)، يمكن دراسته إذا كان متطلبه مسجلاً بنفس الفصل
+          if (
+            isCoreq &&
+            currentSemesterCourses.some(
+              (c) => normalizeCourseCode(c.courseNumber) === normPrereq
+            )
+          ) {
+            isPrereqMet = true;
+          } else {
+            isPrereqMet = false;
+          }
+        }
+      }
+
+      if (!isPrereqMet) {
+        i++;
+        continue;
+      }
 
       // تجنب وضع مساقات تخصص عليا بدون مساقات تمهيدية في الصيفي إلا إذا كان فصل تخرج
       if (
@@ -760,7 +838,10 @@ export function generateGraduationRoadmap(
 
       // إضافة المساق فقط إذا لم يتجاوز السقف الصارم والساعات المستهدفة
       if (currentHours + hours <= targetHours && currentHours + hours <= hardMaxCapacity) {
-        currentSemesterCourses.push(candidate);
+        currentSemesterCourses.push({
+          ...candidate,
+          creditHours: hours,
+        });
         currentHours += hours;
         pool.splice(i, 1);
       } else {
@@ -776,12 +857,21 @@ export function generateGraduationRoadmap(
         c.courseNumber.endsWith('491')
     );
 
+    const proj2Prereq = proj2Course
+      ? getOfficialPrerequisiteCode(proj2Course.courseNumber)
+      : undefined;
+    const canTakeProj2 =
+      !hasProj1InCurrentSem &&
+      !proj1Course &&
+      (!proj2Prereq || completedCourseCodes.has(normalizeCourseCode(proj2Prereq)));
+
     // إدراج مشروع تخرج 2:
     // يوضع حصراً في فصل التخرج أو عند استنفاذ حوض المواد، وبما لا يتجاوز hardMaxCapacity مطلقاً
     if (
       !hasProj1InCurrentSem &&
       !proj1Course &&
       proj2Course &&
+      canTakeProj2 &&
       (canGraduateThisTerm || pool.length === 0) &&
       (!isSummer || canGraduateThisTerm) &&
       currentHours + (proj2Course.creditHours || 2) <= hardMaxCapacity
@@ -790,6 +880,11 @@ export function generateGraduationRoadmap(
       currentHours += proj2Course.creditHours || 2;
       proj2Course = null;
     }
+
+    // إضافة مساقات هذا الفصل إلى قائمة المواد المنجزة لتفتح متطلبات الفصول اللاحقة
+    currentSemesterCourses.forEach((c) => {
+      completedCourseCodes.add(normalizeCourseCode(c.courseNumber));
+    });
 
     const isGrad =
       pool.length === 0 && !proj1Course && !proj2Course && remedialPool.length === 0;

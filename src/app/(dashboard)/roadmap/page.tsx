@@ -959,7 +959,14 @@ export default function GraduationRoadmapPage() {
                           </div>
 
                           {/* Reason Badge & Action Buttons */}
-                          <div className="pt-2 border-t border-surface-container-high/40 space-y-2">
+                          <div className="pt-2 border-t border-surface-container-high/40 space-y-1.5">
+                            {course.prerequisite && course.prerequisite !== '—' && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+                                <span className="material-symbols-outlined text-xs text-primary">link</span>
+                                <span className="line-clamp-1 font-medium">المتطلب: {course.prerequisite}</span>
+                              </div>
+                            )}
+
                             <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
                               <span className="material-symbols-outlined text-xs text-secondary">tips_and_updates</span>
                               <span className="line-clamp-1">{course.reason}</span>

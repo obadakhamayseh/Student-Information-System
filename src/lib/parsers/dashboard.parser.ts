@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { DashboardData, DashboardDataSchema } from '@/lib/schemas/student.schema';
+import { getOfficialCreditHours } from '@/lib/course-catalog';
 
 /**
  * دالة نقية لتحليل صفحة dashboard.jsp واستخراج بيانات الطالب بدقة 100%
@@ -210,10 +211,7 @@ export function parseDashboardHtml(html: string, marksHtml?: string): DashboardD
             const cDays = rowTexts[offset + 5] || '';
 
             if (cNumber && cName && !cName.includes('المجموع') && !cName.includes(':')) {
-              const isProj1 = cNumber === '2222491' || cNumber.endsWith('491') || cName.includes('مشروع تخرج 1') || cName.includes('مشروع تخرج1');
-              const isProj2 = cNumber === '2222492' || cNumber.endsWith('492') || cName.includes('مشروع تخرج 2') || cName.includes('مشروع تخرج2');
-              const isLab = cName.includes('مختبر') || cName.toLowerCase().includes('lab');
-              const crHours = isProj1 ? 1 : isProj2 ? 2 : isLab ? 1 : 3;
+              const crHours = getOfficialCreditHours(cNumber, cName);
 
               courses.push({
                 courseNumber: cNumber,

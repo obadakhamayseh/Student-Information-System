@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { StudyPlanData, StudyPlanDataSchema, PlanCourse } from '@/lib/schemas/plan.schema';
+import { getOfficialCreditHours, getOfficialPrerequisite } from '@/lib/course-catalog';
 
 export interface ParseStudyPlanOptions {
   registeredCourseCodes?: string[];
@@ -76,20 +77,9 @@ export function parseStudyPlanHtml(
 
           const isCategory00 = catTitle === '00' || childrenId === 'children_00' || catTitle.includes('00');
 
-          let hours = parseInt(hoursText.replace(/\D/g, ''), 10);
-          if (isNaN(hours) || hours <= 0) {
-            if (code === '2222491' || code.endsWith('491') || name.includes('مشروع تخرج 1') || name.includes('مشروع تخرج1')) {
-              hours = 1;
-            } else if (code === '2222492' || code.endsWith('492') || name.includes('مشروع تخرج 2') || name.includes('مشروع تخرج2')) {
-              hours = 2;
-            } else if (name.includes('مختبر') || name.toLowerCase().includes('lab')) {
-              hours = 1;
-            } else if (isCategory00 || code.includes('096') || name.includes('امتحان مستوى')) {
-              hours = 0;
-            } else {
-              hours = 3;
-            }
-          }
+          // استخراج الساعات المعتمدة والمتطلبات الرسمية بدقة 100% من الكتالوج المعتمد
+          const hours = isCategory00 ? 0 : getOfficialCreditHours(code, name, hoursText);
+          const prerequisite = getOfficialPrerequisite(code);
 
           let status: 'منجزة' | 'مسجلة' | 'متبقية' = 'متبقية';
           let grade: string | undefined = undefined;
@@ -123,7 +113,7 @@ export function parseStudyPlanHtml(
               courseNumber: code,
               courseName: name,
               creditHours: hours,
-              prerequisite: '—',
+              prerequisite,
               status,
               category: catTitle,
               grade,
@@ -157,13 +147,8 @@ export function parseStudyPlanHtml(
             const texts = cells.map((___, c) => clean($(c).text())).get();
             const cNo = texts[0] || '';
             const cName = texts[1] || '';
-            let hours = parseFloat(texts[2]) || 3;
-            if (cNo === '2222491' || cNo.endsWith('491') || cName.includes('مشروع تخرج 1') || cName.includes('مشروع تخرج1')) {
-              hours = 1;
-            } else if (cNo === '2222492' || cNo.endsWith('492') || cName.includes('مشروع تخرج 2') || cName.includes('مشروع تخرج2')) {
-              hours = 2;
-            }
-            const prereq = texts[3] || '—';
+            const hours = getOfficialCreditHours(cNo, cName, texts[2]);
+            const prereq = getOfficialPrerequisite(cNo, texts[3] || '—');
             const statusRaw = texts[4] || '';
 
             let status: 'منجزة' | 'مسجلة' | 'متبقية' = 'متبقية';
