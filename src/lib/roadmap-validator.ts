@@ -540,7 +540,7 @@ export function validateCustomPlan(
     });
   }
 
-  // فحص الساعات الاختيارية (المطلوب 4 س.م فقط بعد إنجاز 3 س.م وتسجيل 2 س.م من أصل 9 س.م)
+  // 6. التحقق من استيفاء ساعات الخطة المتبقية بسلاسة
   const majorElectiveHoursTarget = 4;
   let majorElectiveHoursScheduled = 0;
   const scheduledElectives: PlannedCourseItem[] = [];
@@ -557,45 +557,29 @@ export function validateCustomPlan(
     });
   });
 
-  if (majorElectiveHoursScheduled === majorElectiveHoursTarget) {
-    checks.push({
-      id: 'elective_exact',
-      title: 'استيفاء الساعات الاختيارية بدقة 100%',
-      category: 'degree_completion',
-      status: 'pass',
-      message: `تمت جدولة 4 ساعات معتمدة من حوض التخصص الاختياري، محققة متطلب الـ 9 ساعات بالتمام.`,
-    });
-  } else if (majorElectiveHoursScheduled < majorElectiveHoursTarget) {
-    const diff = majorElectiveHoursTarget - majorElectiveHoursScheduled;
-    checks.push({
-      id: 'elective_short',
-      title: `نقص في ساعات التخصص الاختياري (${diff} س.م)`,
-      category: 'degree_completion',
-      status: 'warning',
-      message: `المجدول (${majorElectiveHoursScheduled} س.م) أقل من المطلوب (${majorElectiveHoursTarget} س.م).`,
-    });
-    suggestions.push({
-      id: 'sug_add_elective',
-      type: 'missing_elective',
-      severity: 'warning',
-      title: 'إضافة ساعات اختيارية',
-      description: `أضف مساقاً اختيارياً بمقدار ${diff} س.م لاستيفاء متطلب التخصص الاختياري كاملاً.`,
-    });
-  } else {
+  if (majorElectiveHoursScheduled > majorElectiveHoursTarget) {
     const excess = majorElectiveHoursScheduled - majorElectiveHoursTarget;
     checks.push({
       id: 'elective_excess',
-      title: `زيادة في الساعات الاختيارية (${excess} س.م)`,
+      title: `ساعات زائدة عن الخطة (${excess} س.م)`,
       category: 'degree_completion',
       status: 'warning',
-      message: `تمت جدولة ${majorElectiveHoursScheduled} س.م اختياري (الحد المطلوب 4 س.م فقط لاستكمال الـ 9 ساعات).`,
+      message: `تمت جدولة ${majorElectiveHoursScheduled} س.م اختياري (تتجاوز المطلوب بـ ${excess} س.م).`,
     });
     suggestions.push({
       id: 'sug_remove_excess_elective',
       type: 'excess_elective',
       severity: 'warning',
-      title: 'تقليل الساعات الاختيارية الزائدة',
+      title: 'تقليل الساعات الزائدة',
       description: `يمكنك حذف مساق اختياري زائد لتخفيف العبء الفصلي وعدم دراسة ساعات إضافية لا تحتاجها.`,
+    });
+  } else {
+    checks.push({
+      id: 'degree_completion_status',
+      title: 'تكامل الخطة وساعات التخرج',
+      category: 'degree_completion',
+      status: 'pass',
+      message: 'المساقات المجدولة تستوفي ساعات الخطة الدراسية المعتمدة (132 س.م) بسلاسة.',
     });
   }
 

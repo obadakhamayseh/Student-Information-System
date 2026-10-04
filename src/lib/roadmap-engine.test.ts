@@ -31,7 +31,7 @@ describe('Graduation Roadmap Engine', () => {
     expect(roadmap.stats.uniElectiveRemaining).toBe(0); // مكتملة 3/3 في الأقسام الثلاثة
     expect(roadmap.stats.majorCompulsoryRemaining).toBe(18); // 18 س.م فصول قادمة (بعد خصم 13 س.م قيد الدراسة حالياً)
     expect(roadmap.stats.majorElectiveRemaining).toBe(4); // 4 ساعات فقط متبقية للتسجيل (بعد إنجاز 3 س.م وتسجيل 2 س.م من أصل 9 س.م)
-    expect(roadmap.stats.collegeCompulsoryRemaining).toBe(0); // مكتمل بالفصل الحالي (المادة مسجلة حالياً بـ 3 س.م)
+    expect(roadmap.stats.collegeCompulsoryRemaining).toBe(0); // مسجل بالفصل الحالي بـ 3 س.م (قيد الدراسة - بانتظار النتائج)
     expect(roadmap.stats.remedialRemaining).toBe(0); // مهارات حاسوب 99 معفى لاجتياز امتحان المستوى 2200096
 
     // متطلب 00 مكتمل

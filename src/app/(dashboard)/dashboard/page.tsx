@@ -155,54 +155,35 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col w-full">
-      {/* Top Greeting & Real-time Live Sync Strip */}
-      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md mb-space-lg bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container-high/40">
+      {/* Top Greeting */}
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-space-lg bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container-high/40">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-space-xs text-secondary font-label-md">
-            <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
-            <span className="material-symbols-outlined text-sm">verified</span>
-            <span>بث بيانات لحظي مشفر • خادم التسجيل الرئيسي Mutah SIS</span>
-          </div>
           <h2 className="font-headline-xl text-headline-xl text-primary font-bold tracking-tight">
-            مرحباً بك، {data?.studentName || 'طالب جامعة مؤتة'}
+            مرحباً، {data?.studentName?.split(' ')[0] || 'طالب'} 👋
           </h2>
-          <p className="font-body-md text-body-md text-on-surface-variant flex items-center gap-2 flex-wrap">
+          <p className="text-sm text-on-surface-variant flex items-center gap-2 flex-wrap">
             <span className="material-symbols-outlined text-base">today</span>
-            <span id="academic-live-date">{currentDateString}</span>
+            <span>{currentDateString}</span>
             <span>•</span>
             <span>{data?.college || 'جامعة مؤتة'}</span>
-            <span>•</span>
-            <span>{data?.major || 'التخصص الأكاديمي'}</span>
           </p>
         </div>
 
-        {/* Quick Action / Verification Pill */}
-        <div className="flex flex-wrap items-center gap-space-sm">
-          <div className="bg-surface-container-low px-space-md py-2.5 rounded-lg flex items-center gap-space-sm text-on-surface border border-surface-container-high/40">
-            <span className="material-symbols-outlined text-secondary text-xl">shield_check</span>
-            <div className="flex flex-col">
-              <span className="font-label-sm text-label-sm text-on-surface-variant">الرقم الجامعي</span>
-              <span className="font-label-md text-label-md font-bold text-primary" dir="ltr">
-                {data?.studentId || '—'}
-              </span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
           <Link
             href="/roadmap"
-            className="bg-secondary hover:bg-secondary/90 text-on-secondary px-space-md py-2.5 rounded-lg font-label-lg flex items-center gap-space-xs transition-all shadow-sm active:scale-95 cursor-pointer font-bold text-xs"
+            className="bg-primary hover:bg-primary/90 text-on-primary px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-sm font-semibold text-sm"
           >
             <span className="material-symbols-outlined text-lg">alt_route</span>
-            <span>خريطة التخرج الذكية</span>
+            <span>خريطة التخرج</span>
           </Link>
           <button
-            className="bg-primary hover:bg-primary-container text-on-primary px-space-md py-2.5 rounded-lg font-label-lg flex items-center gap-space-xs transition-all shadow-sm active:scale-95 disabled:opacity-75 cursor-pointer"
+            className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors disabled:opacity-60 cursor-pointer"
             onClick={handleManualSync}
             disabled={refreshing}
+            title="تحديث البيانات"
           >
-            <span className={`material-symbols-outlined text-lg ${refreshing ? 'animate-spin' : ''}`}>
-              refresh
-            </span>
-            <span>{syncStatusText}</span>
+            <span className={`material-symbols-outlined text-xl ${refreshing ? 'animate-spin' : ''}`}>refresh</span>
           </button>
         </div>
       </section>
@@ -500,64 +481,61 @@ export default function DashboardPage() {
         {/* Left Panel (4 Cols): Academic Standing & Warnings Card */}
         <section className="lg:col-span-4 flex flex-col gap-space-md">
           {/* Status Box */}
-          <div className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col justify-between h-full border border-surface-container-high/40">
-            <div>
-              <div className="flex items-center justify-between pb-space-sm border-b border-surface-container-high/40">
-                <span className="font-label-lg text-label-lg font-bold text-primary">
-                  الملف الأكاديمي والخدمة
-                </span>
-                <span className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-lg">verified_user</span>
-                </span>
-              </div>
-              <div className="p-space-md rounded-xl bg-surface-container-low my-space-md flex flex-col gap-2 border border-surface-container-high/40">
-                <div className="flex items-center gap-2 text-secondary font-headline-sm text-headline-sm font-bold">
-                  <span className="material-symbols-outlined">check_circle</span>
-                  <span>الوضع الأكاديمي: {data?.academicStatus || 'منتظم'}</span>
-                </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                  سجل الطالب سليم في عمادة القبول والتسجيل • نوع الدراسة: البرنامج العادي.
-                </p>
-              </div>
-              <div className="space-y-space-sm mt-space-md">
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
-                  <span className="font-label-md text-label-md text-on-surface-variant">خدمة العلم:</span>
-                  <span className="text-secondary font-bold font-label-md">
-                    {data?.militaryStatus || (data?.militaryExpireDate ? `تاريخ الانتهاء: ${data.militaryExpireDate}` : 'مستوفى')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
-                  <span className="font-label-md text-label-md text-on-surface-variant">ملاحظات القبول والتسجيل:</span>
-                  <span className="bg-surface-container-high text-primary font-bold px-2 py-0.5 rounded font-label-md">
-                    {data?.acceptanceNotesCount ?? 0} ملاحظات
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
-                  <span className="font-label-md text-label-md text-on-surface-variant">ملاحظات الشؤون المالية:</span>
-                  <span className="bg-surface-container-high text-primary font-bold px-2 py-0.5 rounded font-label-md">
-                    {data?.financialNotesCount ?? 0} ملاحظات
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-surface-container-high/40">
-                  <span className="font-label-md text-label-md text-on-surface-variant">المرشد الأكاديمي:</span>
-                  <span className="text-primary font-bold font-label-md">
-                    {data?.advisor && data.advisor !== '—' ? data.advisor : 'عمادة الكلية'}
-                  </span>
-                </div>
-              </div>
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-4 h-full border border-surface-container-high/40">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-container-high/40">
+              <span className="font-semibold text-sm text-on-surface">الملف الأكاديمي</span>
+              <span className="flex items-center gap-1 text-xs text-secondary font-semibold">
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                {data?.academicStatus || 'منتظم'}
+              </span>
             </div>
 
-            {/* Visual Trust Seal */}
-            <div className="mt-space-lg p-space-sm rounded-lg bg-surface-container-high/50 flex items-center gap-space-sm border border-surface-container-high/50">
-              <span className="material-symbols-outlined text-secondary text-2xl">fingerprint</span>
-              <div className="flex flex-col">
-                <span className="font-label-sm text-label-sm text-primary font-bold">
-                  تكامل مباشر عبر بروتوكول BFF
-                </span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">
-                  مطابق 100% مع بيانات الخادم الرسمي
+            <div className="flex flex-col gap-2">
+              {/* Military Service - only if has value */}
+              {(data?.militaryStatus || data?.militaryExpireDate) && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+                  <span className="text-xs text-on-surface-variant">خدمة العلم</span>
+                  <span className="text-secondary font-bold text-xs">
+                    {data?.militaryStatus || `ينتهي: ${data?.militaryExpireDate}`}
+                  </span>
+                </div>
+              )}
+
+              {/* Acceptance Notes - only if > 0 */}
+              {(data?.acceptanceNotesCount ?? 0) > 0 && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-warning-container/30">
+                  <span className="text-xs text-on-surface-variant">ملاحظات القبول</span>
+                  <span className="bg-warning text-on-warning font-bold px-2 py-0.5 rounded text-xs">
+                    {data?.acceptanceNotesCount} ملاحظات
+                  </span>
+                </div>
+              )}
+
+              {/* Financial Notes - only if > 0 */}
+              {(data?.financialNotesCount ?? 0) > 0 && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-error-container/30">
+                  <span className="text-xs text-on-surface-variant">ملاحظات مالية</span>
+                  <span className="bg-error text-on-error font-bold px-2 py-0.5 rounded text-xs">
+                    {data?.financialNotesCount} ملاحظات
+                  </span>
+                </div>
+              )}
+
+              {/* Advisor */}
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+                <span className="text-xs text-on-surface-variant">المرشد الأكاديمي</span>
+                <span className="text-primary font-semibold text-xs">
+                  {data?.advisor && data.advisor !== '—' ? data.advisor : 'عمادة الكلية'}
                 </span>
               </div>
+
+              {/* No issues state */}
+              {(data?.acceptanceNotesCount ?? 0) === 0 && (data?.financialNotesCount ?? 0) === 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/10 text-secondary">
+                  <span className="material-symbols-outlined text-lg">task_alt</span>
+                  <span className="text-xs font-semibold">لا توجد ملاحظات أو تنبيهات</span>
+                </div>
+              )}
             </div>
           </div>
         </section>

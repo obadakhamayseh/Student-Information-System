@@ -247,31 +247,31 @@ END:VCALENDAR`;
             </p>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-space-sm flex-wrap shrink-0 w-full sm:w-auto">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-lowest/10 hover:bg-surface-container-lowest/20 text-on-primary px-3 sm:px-space-md py-2.5 rounded-lg transition-all font-label-lg text-xs sm:text-label-lg shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 bg-surface-container-lowest/10 hover:bg-surface-container-lowest/20 text-on-primary px-3 py-2 rounded-lg transition-all text-xs font-semibold cursor-pointer"
               onClick={() => window.print()}
-              title="طباعة الجدول الدراسي الأسبوعي أو حفظه كـ PDF رسمي"
+              title="طباعة أو حفظ PDF"
             >
-              <span className="material-symbols-outlined text-base sm:text-lg">print</span>
-              <span>طباعة الجدول (PDF)</span>
+              <span className="material-symbols-outlined text-base">print</span>
+              <span className="hidden sm:inline">PDF</span>
             </button>
             <button
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-lowest/10 hover:bg-surface-container-lowest/20 text-on-primary px-3 sm:px-space-md py-2.5 rounded-lg transition-all font-label-lg text-xs sm:text-label-lg shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 bg-surface-container-lowest/10 hover:bg-surface-container-lowest/20 text-on-primary px-3 py-2 rounded-lg transition-all text-xs font-semibold cursor-pointer"
               onClick={handleExportCsv}
-              title="تصدير جدول المحاضرات كملف Excel / CSV"
+              title="تصدير Excel"
             >
-              <span className="material-symbols-outlined text-base sm:text-lg text-secondary-container">table_view</span>
-              <span>تصدير Excel</span>
+              <span className="material-symbols-outlined text-base text-secondary-container">table_view</span>
+              <span className="hidden sm:inline">Excel</span>
             </button>
             <button
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-secondary hover:bg-secondary/90 text-on-secondary px-3 sm:px-space-md py-2.5 rounded-lg transition-all font-label-lg text-xs sm:text-label-lg shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 bg-secondary hover:bg-secondary/90 text-on-secondary px-3 py-2 rounded-lg transition-all text-xs font-semibold cursor-pointer"
               onClick={() => setShowExportModal(true)}
-              title="إضافة مواعيد المحاضرات إلى تقويم الهاتف الذكي"
+              title="إضافة للتقويم"
             >
-              <span className="material-symbols-outlined text-base sm:text-lg">calendar_add_on</span>
-              <span>إضافة للتقويم</span>
+              <span className="material-symbols-outlined text-base">calendar_add_on</span>
+              <span className="hidden sm:inline">التقويم</span>
             </button>
           </div>
         </div>

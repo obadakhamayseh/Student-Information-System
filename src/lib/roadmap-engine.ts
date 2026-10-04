@@ -49,7 +49,7 @@ export interface RoadmapCategorySummary {
   enrolledHours: number;
   remainingHours: number;
   grossRemainingHours?: number;
-  status: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي';
+  status: 'مكتمل' | 'قيد الدراسة (بانتظار النتائج)' | 'متبقي';
   isCompulsory: boolean;
   isElective: boolean;
   isRemedial: boolean;
@@ -344,11 +344,11 @@ export function generateGraduationRoadmap(
           stats.majorCompulsoryGross = (stats.majorCompulsoryGross || 0) + catRemainingHours;
         }
 
-        const catStatus: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي' =
+        const catStatus: 'مكتمل' | 'قيد الدراسة (بانتظار النتائج)' | 'متبقي' =
           catComp >= catReq
             ? 'مكتمل'
-            : unstudiedNeededHours === 0
-            ? 'مكتمل بالفصل الحالي'
+            : enrolledHoursInCat > 0 && unstudiedNeededHours === 0
+            ? 'قيد الدراسة (بانتظار النتائج)'
             : 'متبقي';
 
         categoriesSummary.push({
@@ -450,11 +450,11 @@ export function generateGraduationRoadmap(
           stats.majorElectiveRemaining += unstudiedNeededHours;
         }
 
-        const catStatus: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي' =
+        const catStatus: 'مكتمل' | 'قيد الدراسة (بانتظار النتائج)' | 'متبقي' =
           catComp >= catReq
             ? 'مكتمل'
-            : unstudiedNeededHours === 0
-            ? 'مكتمل بالفصل الحالي'
+            : enrolledHoursInCat > 0 && unstudiedNeededHours === 0
+            ? 'قيد الدراسة (بانتظار النتائج)'
             : 'متبقي';
 
         categoriesSummary.push({
@@ -568,11 +568,11 @@ export function generateGraduationRoadmap(
         const unstudiedNeededHours = Math.max(0, catRemainingHours - enrolledHoursInCat);
         totalRemainingHours += unstudiedNeededHours;
 
-        const catStatus: 'مكتمل' | 'مكتمل بالفصل الحالي' | 'متبقي' =
+        const catStatus: 'مكتمل' | 'قيد الدراسة (بانتظار النتائج)' | 'متبقي' =
           catComp >= catReq
             ? 'مكتمل'
-            : unstudiedNeededHours === 0
-            ? 'مكتمل بالفصل الحالي'
+            : enrolledHoursInCat > 0 && unstudiedNeededHours === 0
+            ? 'قيد الدراسة (بانتظار النتائج)'
             : 'متبقي';
 
         categoriesSummary.push({

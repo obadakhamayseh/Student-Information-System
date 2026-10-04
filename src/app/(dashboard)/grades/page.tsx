@@ -221,60 +221,45 @@ export default function GradesPage() {
         ]}
       />
 
-      {/* Status & Context Pill Header Strip */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-space-md mb-space-lg no-print">
-        <div className="flex items-center gap-space-sm">
+      {/* Header */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-space-lg no-print">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary-container text-secondary-container flex items-center justify-center shadow-sm shrink-0">
             <span className="material-symbols-outlined text-2xl">verified</span>
           </div>
           <div className="flex flex-col">
-            <div className="flex items-center gap-space-xs flex-wrap">
-              <h1 className="font-headline-md text-headline-md text-on-surface text-lg sm:text-headline-md font-bold">
-                السجل الأكاديمي والعلامات التفصيلية
-              </h1>
-              <span className="px-2 py-0.5 rounded-full bg-secondary-container/40 text-on-secondary-fixed text-xs font-bold font-label-sm">
-                سجل رسمي معتمد
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant text-xs sm:text-body-sm">
-              البيانات مستخرجة ومطابقة رقمياً عبر بوابة الطالب المركزية لجامعة مؤتة للطالب: {data?.studentName} ({data?.studentId})
-            </p>
+            <h1 className="font-bold text-lg text-on-surface">
+              السجل الأكاديمي والعلامات
+            </h1>
+            <p className="text-xs text-on-surface-variant">سجل رسمي معتمد • {data?.studentName} ({data?.studentId})</p>
           </div>
         </div>
 
-        {/* Action Buttons Bar */}
-        <div className="flex items-center flex-wrap gap-2 sm:gap-space-sm w-full sm:w-auto">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => fetchGrades(true)}
             disabled={refreshing}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-high hover:bg-surface-variant text-on-surface px-3 sm:px-space-md py-2.5 rounded-lg shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-50 text-xs sm:text-sm font-label-lg"
+            className="p-2 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface transition-all cursor-pointer disabled:opacity-50"
+            title="تحديث البيانات"
           >
-            <span
-              className={`material-symbols-outlined text-secondary transition-transform duration-700 ${
-                refreshing ? 'animate-spin' : 'group-hover:rotate-180'
-              }`}
-            >
-              sync
-            </span>
-            <span>
-              {refreshing ? 'جاري المزامنة...' : 'إعادة الجلب المباشر'}
-            </span>
+            <span className={`material-symbols-outlined text-xl text-secondary ${refreshing ? 'animate-spin' : ''}`}>sync</span>
           </button>
           <button
             onClick={handlePrintTranscript}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-primary hover:bg-primary-container text-on-primary hover:text-primary-fixed px-3 sm:px-space-md py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-xs sm:text-sm font-label-lg"
-            title="طباعة كشف العلامات أو حفظه كـ PDF رسمي"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-container text-on-primary px-3 py-2 rounded-lg transition-all cursor-pointer text-xs font-semibold"
+            title="طباعة أو حفظ PDF"
           >
-            <span className="material-symbols-outlined text-lg">print</span>
-            <span>طباعة / تصدير PDF</span>
+            <span className="material-symbols-outlined text-base">print</span>
+            <span className="hidden sm:inline">PDF</span>
           </button>
           <button
             onClick={handleExportCsv}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-space-xs bg-surface-container-high hover:bg-surface-variant text-on-surface px-3 sm:px-space-md py-2.5 rounded-lg shadow-sm border border-surface-container-high/50 transition-all duration-200 cursor-pointer text-xs sm:text-sm font-label-lg"
-            title="تصدير السجل الأكاديمي كملف Excel / CSV"
+            className="flex items-center gap-1.5 bg-surface-container-high hover:bg-surface-variant text-on-surface px-3 py-2 rounded-lg transition-all cursor-pointer text-xs font-semibold"
+            title="تصدير Excel"
           >
-            <span className="material-symbols-outlined text-lg text-secondary">table_view</span>
-            <span>تصدير Excel</span>
+            <span className="material-symbols-outlined text-base text-secondary">table_view</span>
+            <span className="hidden sm:inline">Excel</span>
           </button>
         </div>
       </div>

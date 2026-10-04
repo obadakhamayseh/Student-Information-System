@@ -657,99 +657,85 @@ export default function GraduationRoadmapPage() {
         ]}
       />
 
-      {/* 1. Header Banner & Context */}
-      <div className="w-full bg-gradient-to-l from-primary via-primary-container to-slate-900 text-on-primary rounded-2xl p-6 sm:p-8 shadow-md relative overflow-hidden mb-space-lg border border-white/10 no-print">
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
+      {/* 1. Header Banner */}
+      <div className="w-full bg-gradient-to-l from-primary via-primary-container to-slate-900 text-on-primary rounded-2xl p-5 sm:p-7 shadow-md relative overflow-hidden mb-space-lg border border-white/10 no-print">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-secondary-container/30 text-secondary-container px-3 py-1 rounded-full font-label-sm text-xs font-bold flex items-center gap-1.5 border border-secondary-container/20">
+              <span className="bg-secondary-container/30 text-secondary-container px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border border-secondary-container/20">
                 <span className="material-symbols-outlined text-sm">auto_awesome</span>
-                المرشد الأكاديمي ومحرك التخصيص الذكي (Custom Plan Engine)
+                مرشد التخرج الذكي
               </span>
-              <span className="bg-white/10 text-white/90 px-3 py-1 rounded-full font-label-sm text-xs">
+              <span className="bg-white/10 text-white/90 px-3 py-1 rounded-full text-xs">
                 {planData?.majorName || 'الخطة الأكاديمية'}
               </span>
-              {planData?.planYear && (
-                <span className="bg-white/10 text-white/90 px-3 py-1 rounded-full font-label-sm text-xs">
-                  خطة سنة {planData.planYear}
-                </span>
-              )}
             </div>
 
-            <h1 className="font-headline-xl text-2xl sm:text-headline-xl font-bold tracking-tight text-white">
-              خريطة التخرج ومسار الفصول المقترحة
+            <h1 className="font-bold text-xl sm:text-2xl tracking-tight text-white">
+              خريطة التخرج ومسار الفصول
             </h1>
-            <p className="font-body-md text-on-primary-container max-w-2xl text-xs sm:text-sm leading-relaxed">
-              اختر مسارك المقترح من الذكاء الاصطناعي أو خصّص خطتك بنفسك بحرية كاملة مع فحص دقيق وفوري
-              لصحة اختياراتك، أسبقيات المواد، وسقوف الساعات المعتمدة بجامعة مؤتة.
+            <p className="text-on-primary-container text-xs sm:text-sm leading-relaxed max-w-xl">
+              اعرض المسار المقترح بالذكاء الاصطناعي أو خصّص خطتك وتحقق من صحتها فوراً.
             </p>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+          {/* Action Buttons — compact */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => fetchPlan(true)}
               disabled={refreshing}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer disabled:opacity-50"
+              title="تحديث البيانات"
             >
-              <span className={`material-symbols-outlined text-base ${refreshing ? 'animate-spin' : ''}`}>
-                sync
-              </span>
-              <span>{refreshing ? 'جاري التحديث...' : 'تحديث المسار'}</span>
+              <span className={`material-symbols-outlined text-xl ${refreshing ? 'animate-spin' : ''}`}>sync</span>
             </button>
             <button
               onClick={handlePrint}
-              className="px-4 py-2.5 rounded-xl bg-secondary text-on-secondary hover:bg-secondary/90 text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shadow-sm"
-              title="طباعة خريطة التخرج أو حفظها كـ PDF"
+              className="px-4 py-2 rounded-xl bg-secondary text-on-secondary hover:bg-secondary/90 text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shadow-sm"
+              title="طباعة أو حفظ كـ PDF"
             >
               <span className="material-symbols-outlined text-base">print</span>
-              <span>طباعة / حفظ PDF</span>
+              <span className="hidden sm:inline">PDF</span>
             </button>
             <button
               onClick={handleExportRoadmapCsv}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shadow-sm"
-              title="تصدير مسار التخرج والفصول المقترحة إلى ملف Excel / CSV"
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer"
+              title="تصدير إلى Excel"
             >
-              <span className="material-symbols-outlined text-base text-secondary-container">
-                table_view
-              </span>
-              <span>تصدير Excel</span>
+              <span className="material-symbols-outlined text-base text-secondary-container">table_view</span>
+              <span className="hidden sm:inline">Excel</span>
             </button>
             <Link
               href="/plan"
-              className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer"
+              title="عرض الخطة الشجرية"
             >
               <span className="material-symbols-outlined text-base">account_tree</span>
-              <span>الخطة الشجرية</span>
+              <span className="hidden sm:inline">الخطة</span>
             </Link>
           </div>
         </div>
 
-        {/* Decorative background watermark */}
         <div className="absolute -left-10 -bottom-10 opacity-10 pointer-events-none select-none text-white">
           <span className="material-symbols-outlined text-[200px]">route</span>
         </div>
       </div>
 
-      {/* 2. Mode Selector: Recommended vs. Custom Mode */}
-      <div className="bg-surface-container-lowest rounded-2xl p-3 sm:p-4 shadow-sm border border-surface-container-high/60 mb-space-lg no-print">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 w-full md:w-auto">
+      {/* 2. Mode Selector */}
+      <div className="bg-surface-container-lowest rounded-2xl p-3 shadow-sm border border-surface-container-high/60 mb-space-lg no-print">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Mode Toggle */}
+          <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-xl w-full sm:w-auto">
             <button
               onClick={() => setPlanMode('recommended')}
-              className={`flex-1 md:flex-initial px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 planMode === 'recommended'
                   ? 'bg-primary text-on-primary shadow-sm'
-                  : 'bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              <span className="material-symbols-outlined text-base text-secondary-container">
-                auto_awesome
-              </span>
-              <span>مسار الذكاء الاصطناعي المقترح</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-mono">
-                افتراضي
-              </span>
+              <span className="material-symbols-outlined text-base">auto_awesome</span>
+              <span>مسار الذكاء الاصطناعي</span>
             </button>
 
             <button
@@ -759,95 +745,84 @@ export default function GraduationRoadmapPage() {
                   setCustomSemesters(JSON.parse(JSON.stringify(baseRoadmap.semesters)));
                 }
               }}
-              className={`flex-1 md:flex-initial px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 planMode === 'custom'
                   ? 'bg-secondary text-on-secondary shadow-sm'
-                  : 'bg-surface-container-low text-on-surface-variant hover:text-secondary hover:bg-surface-container'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               <span className="material-symbols-outlined text-base">dashboard_customize</span>
-              <span>تخصيص الخطة ومسار الفصول (Custom Plan)</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500 text-white font-mono font-bold animate-pulse">
-                تخصيص حر 🎯
-              </span>
+              <span>تخصيص الخطة</span>
             </button>
           </div>
 
-          {/* Quick controls on the right */}
-          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          {/* Context Controls */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             {planMode === 'custom' && (
               <>
                 <button
                   onClick={handleAddNewSemester}
-                  className="px-3 py-2 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary transition-all flex items-center gap-1.5 cursor-pointer border border-primary/20"
-                  title="إضافة فصل دراسي جديد لتوزيع المقررات"
+                  className="px-3 py-2 rounded-lg text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-base">add_circle</span>
-                  <span>+ إضافة فصل دراسي جديد</span>
+                  <span>+ فصل جديد</span>
                 </button>
                 <button
                   onClick={handleResetToRecommended}
-                  className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-primary transition-all flex items-center gap-1.5 cursor-pointer"
-                  title="استعادة الخطة المقترحة بالكامل"
+                  className="px-3 py-2 rounded-lg text-xs font-bold bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-primary transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="استعادة الخطة المقترحة"
                 >
                   <span className="material-symbols-outlined text-base">restart_alt</span>
-                  <span>استعادة المقترح</span>
+                  <span className="hidden sm:inline">استعادة</span>
                 </button>
               </>
             )}
 
             {planMode === 'recommended' && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {/* Pace Buttons */}
-                <div className="bg-surface-container-low p-1 rounded-xl flex items-center gap-1 border border-surface-container-high/40">
+              <div className="flex items-center gap-1.5">
+                <div className="bg-surface-container-low p-1 rounded-lg flex items-center gap-1 border border-surface-container-high/40">
                   <button
                     onClick={() => handlePaceChange('fast')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                      config.pace === 'fast'
-                        ? 'bg-primary text-on-primary shadow-xs'
-                        : 'text-on-surface-variant hover:text-primary'
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      config.pace === 'fast' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
                     }`}
+                    title="الحد الأقصى 18 ساعة"
                   >
-                    <span>⚡</span>
-                    <span>18 س.م</span>
+                    ⚡ سريع
                   </button>
                   <button
                     onClick={() => handlePaceChange('balanced')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                      config.pace === 'balanced'
-                        ? 'bg-primary text-on-primary shadow-xs'
-                        : 'text-on-surface-variant hover:text-primary'
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      config.pace === 'balanced' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
                     }`}
+                    title="15-16 ساعة معتدلة"
                   >
-                    <span>⚖️</span>
-                    <span>متوازن</span>
+                    ⚖️ متوازن
                   </button>
                   <button
                     onClick={() => handlePaceChange('light')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                      config.pace === 'light'
-                        ? 'bg-primary text-on-primary shadow-xs'
-                        : 'text-on-surface-variant hover:text-primary'
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      config.pace === 'light' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
                     }`}
+                    title="12-14 ساعة مخففة"
                   >
-                    <span>🌿</span>
-                    <span>مخفف</span>
+                    🌿 مخفف
                   </button>
                 </div>
 
-                {/* Summer Toggle */}
                 <button
                   onClick={toggleSummer}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer border ${
                     config.includeSummer
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-900'
                       : 'bg-surface-container-low border-surface-container-high text-on-surface-variant'
                   }`}
+                  title={config.includeSummer ? 'استبعاد الفصل الصيفي' : 'تضمين الفصل الصيفي'}
                 >
                   <span className="material-symbols-outlined text-base text-amber-600">
                     {config.includeSummer ? 'wb_sunny' : 'nightlight'}
                   </span>
-                  <span>{config.includeSummer ? 'صيفي: مفعّل' : 'صيفي: مستبعد'}</span>
+                  <span className="hidden sm:inline">{config.includeSummer ? 'صيفي: مفعّل' : 'صيفي: مستبعد'}</span>
                 </button>
               </div>
             )}
@@ -911,8 +886,7 @@ export default function GraduationRoadmapPage() {
                 </h3>
 
                 <p className="text-xs text-on-surface-variant leading-relaxed">
-                  فحص تلقائي للأسبقيات، سقوف الساعات (18/21 عادي، 10/12 صيفي)، وتسكين 4 ساعات اختياري
-                  تخصص دون زيادة أو نقصان.
+                  خطة أكاديمية متوازنة مبنية على ساعات خطتك الرسمية (132 س.م) وتوزيع الساعات المتبقية بسلاسة حتى التخرج.
                 </p>
               </div>
             </div>
@@ -968,16 +942,9 @@ export default function GraduationRoadmapPage() {
             </div>
 
             <div className="p-2.5 rounded-xl bg-surface-container-low/60 flex flex-col gap-0.5">
-              <span className="text-on-surface-variant text-[11px]">ساعات التخصص الاختيارية</span>
-              <span className="font-bold text-primary font-mono text-sm flex items-center gap-1">
-                {validationResult.majorElectiveHoursScheduled} /{' '}
-                {validationResult.majorElectiveHoursTarget} س.م
-                {validationResult.majorElectiveHoursScheduled ===
-                validationResult.majorElectiveHoursTarget ? (
-                  <span className="text-emerald-600 text-[11px]">✓ مضبوطة</span>
-                ) : (
-                  <span className="text-amber-600 text-[11px]">بحاجة لضبط</span>
-                )}
+              <span className="text-on-surface-variant text-[11px]">الساعات المتبقية للتسجيل</span>
+              <span className="font-bold text-primary font-mono text-sm">
+                {remainingHours} س.م
               </span>
             </div>
 
@@ -1414,6 +1381,8 @@ export default function GraduationRoadmapPage() {
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           isDone
                             ? 'bg-emerald-100 text-emerald-800'
+                            : cat.status.includes('قيد الدراسة')
+                            ? 'bg-blue-100 text-blue-900 border border-blue-200'
                             : 'bg-amber-100 text-amber-900'
                         }`}
                       >
@@ -1824,11 +1793,7 @@ export default function GraduationRoadmapPage() {
                                     قيد الدراسة بالفصل الحالي
                                   </span>
                                 )}
-                                {course.isElectiveChoice && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                    خيار اختياري (تخصص)
-                                  </span>
-                                )}
+
                               </div>
 
                               {/* Real-time Prerequisite Status Pill with Official Grade / Audit Criteria */}
@@ -2221,9 +2186,7 @@ export default function GraduationRoadmapPage() {
               <li>
                 <strong>قاعدة الحد الأقصى للعبء الفصلي (18 / 21 س.م وعادي / صيفي):</strong> في الفصول العادية يُسمح بتسجيل حتى <strong>18 ساعة معتمدة</strong> كحد أقصى، ويُسمح للطالب الخريج حصراً بتسجيل حتى <strong>21 ساعة معتمدة</strong> في فصل التخرج. وفي الفصل الصيفي يكون الحد الأقصى <strong>10 ساعات معتمدة</strong>، ويُسمح للخريج بالصيفي بتسجيل حتى <strong>12 ساعة معتمدة</strong>.
               </li>
-              <li>
-                <strong>حساب ساعات التخصص الاختيارية:</strong> الخطة تقتضي إنهاء <strong>9 ساعات</strong> اختياري تخصص. بعد إنجاز 3 ساعات سابقاً وتسجيل 2 ساعة في الفصل الحالي، تبقى <strong>4 ساعات معتمدة فقط</strong> للتسكين حتى التخرج بدقة 100%.
-              </li>
+
               <li>
                 <strong>أولوية مشروع التخرج:</strong> يجب إنهاء مشروع تخرج 1 قبل مشروع تخرج 2، ويُفضل دوماً أن يكون مشروع تخرج 2 في الفصل الأخير.
               </li>

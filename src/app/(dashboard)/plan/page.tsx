@@ -92,12 +92,14 @@ export default function PlanPage() {
       return data.categories.map((cat, idx) => {
         const enrolledInCat = cat.courses?.filter((c) => c.status === 'مسجلة') || [];
         const enrolledHours = enrolledInCat.reduce((sum, c) => sum + (c.creditHours || 3), 0);
-        const remainingHours = Math.max(0, cat.requiredHours - cat.completedHours - enrolledHours);
+        // الساعات المتبقية تعتمد حصراً على ما تم إنجازه رسمياً (لا تُعتبر المواد المسجلة منجزة إلا بعد صدور النتائج)
+        const remainingHours = Math.max(0, cat.requiredHours - cat.completedHours);
         const isElective = cat.name.includes('اختياري') || cat.name.includes('إختياري');
 
+        // نسبة الإنجاز تمثل الساعات التي صدرت نتائجها الرسمية فقط
         const percent =
           cat.requiredHours > 0
-            ? Math.min(100, Math.round(((cat.completedHours + enrolledHours) / cat.requiredHours) * 100))
+            ? Math.min(100, Math.round((cat.completedHours / cat.requiredHours) * 100))
             : cat.completedHours > 0
             ? 100
             : 0;
@@ -148,14 +150,14 @@ export default function PlanPage() {
       } else if (c.status === 'مسجلة') {
         existing.enrolledHours += h;
       }
-      existing.remainingHours = Math.max(0, existing.requiredHours - existing.completedHours - existing.enrolledHours);
+      existing.remainingHours = Math.max(0, existing.requiredHours - existing.completedHours);
       catMap.set(catName, existing);
     }
 
     return Array.from(catMap.values()).map((def) => {
       const percent =
         def.requiredHours > 0
-          ? Math.min(100, Math.round(((def.completedHours + def.enrolledHours) / def.requiredHours) * 100))
+          ? Math.min(100, Math.round((def.completedHours / def.requiredHours) * 100))
           : def.completedHours > 0
           ? 100
           : 0;
@@ -367,22 +369,22 @@ export default function PlanPage() {
                 تتبع ساعات التخرج المنجزة والمتطلبات السابقة لفتح المواد المتقدمة وفق الخطة الشجرية المعتمدة
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap no-print">
+            <div className="flex items-center gap-2 flex-wrap no-print shrink-0">
               <button
                 onClick={handlePrintPlan}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high/60 hover:bg-surface-container-high text-primary border border-surface-container-high/60 text-xs font-bold transition-all cursor-pointer shadow-sm"
                 title="طباعة وثيقة الخطة الدراسية أو حفظها كـ PDF"
               >
                 <span className="material-symbols-outlined text-base">print</span>
-                <span>طباعة الخطة (PDF)</span>
+                <span>PDF</span>
               </button>
               <button
                 onClick={handleExportPlanCsv}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-high text-primary border border-surface-container-high/60 text-xs font-bold hover:bg-surface-container-highest transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high/60 hover:bg-surface-container-high text-primary border border-surface-container-high/60 text-xs font-bold transition-all cursor-pointer shadow-sm"
                 title="تصدير مواد الخطة الدراسية كملف Excel / CSV"
               >
                 <span className="material-symbols-outlined text-base text-secondary">table_view</span>
-                <span>تصدير Excel</span>
+                <span>Excel</span>
               </button>
             </div>
           </div>
@@ -467,7 +469,7 @@ export default function PlanPage() {
                       الوضع الأكاديمي: سليم ومطابق لشروط الخطة
                     </span>
                     <span className="font-label-sm text-label-sm text-on-surface-variant">
-                      {completedHours} ساعة مجتازة + {currentRegisteredHours} ساعة مسجلة حالياً = {completedHours + currentRegisteredHours} ساعة منجزة بعد هذا الفصل{remainingAfterCurrent > 0 ? ` (يتبقى ${remainingAfterCurrent} س.م للتخرج)` : ' — مؤهل للتخرج ✓'}
+                      {completedHours} ساعة منجزة رسمياً + {currentRegisteredHours} ساعة مسجلة قيد الدراسة حالياً (تُعتمد منجزة فور صدور نتائج هذا الفصل)
                     </span>
                   </div>
                 </div>
@@ -662,13 +664,13 @@ export default function PlanPage() {
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary/15 text-secondary mr-auto">
                       منجز بالكامل
                     </span>
-                  ) : cat.remainingHours > 0 ? (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 mr-auto">
-                      متبقي للتسجيل {cat.remainingHours} س.م
+                  ) : cat.enrolledHours > 0 && cat.remainingHours <= cat.enrolledHours ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200 mr-auto">
+                      قيد الدراسة (بانتظار النتائج)
                     </span>
                   ) : (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 mr-auto">
-                      مكتمل بالفصل الحالي
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 mr-auto">
+                      متبقي {cat.remainingHours} س.م
                     </span>
                   )}
                 </div>

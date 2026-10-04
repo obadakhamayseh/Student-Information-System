@@ -464,26 +464,7 @@ export default function RegistrationMenuPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => {
-                const el = document.getElementById('psub_number');
-                el?.focus();
-                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }}
-              className="text-xs text-secondary hover:text-secondary-fixed font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/10 hover:bg-secondary/20 border border-secondary/20 transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-base">add_circle</span>
-              <span>إضافة مادة سريعة</span>
-            </button>
-            <Link
-              href="/registration/plan"
-              className="text-xs text-primary hover:text-primary font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-all"
-            >
-              <span className="material-symbols-outlined text-base">menu_book</span>
-              <span>التسجيل بالخطة</span>
-            </Link>
-          </div>
+
         </div>
 
         {/* شريط البحث السريع بالمواد المسجلة */}

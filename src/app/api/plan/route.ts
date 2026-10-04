@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
   const studentId = session.studentId || 'unknown';
 
-  if (!forceRefresh) {
+  if (!forceRefresh && process.env.NODE_ENV !== 'development') {
     const cached = ServerCache.get(ServerCache.key(studentId, 'plan'));
     if (cached) {
       return NextResponse.json(cached);
