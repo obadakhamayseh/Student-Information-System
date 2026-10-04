@@ -657,9 +657,9 @@ export default function GraduationRoadmapPage() {
                         معفى / منجز ✓
                       </span>
                     )}
-                    {cat.isElective && cat.remainingHours > 0 && (
+                    {cat.isElective && (
                       <span className="text-[10px] text-amber-800 font-medium">
-                        خيار استرشادي
+                        المطلوب {cat.requiredHours} س.م فقط من حوض المواد
                       </span>
                     )}
                     {cat.isRemedial && (

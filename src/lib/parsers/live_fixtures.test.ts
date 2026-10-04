@@ -90,9 +90,9 @@ describe('Live Fixtures Parity Tests', () => {
     expect(completed.length).toBeGreaterThan(25);
 
     const registered = result.courses.filter(c => c.status === 'مسجلة');
-    expect(registered.length).toBe(6);
+    expect(registered.length).toBe(7); // 6 مواد إجبارية + مادة معالجة الصور الرقمية (2211362 - 2 س.م)
     const registeredHours = registered.reduce((sum, c) => sum + c.creditHours, 0);
-    expect(registeredHours).toBe(16);
+    expect(registeredHours).toBe(18); // 16 س.م إجباري + 2 س.م اختياري كلية مسجلة حالياً
 
     // التحقق من تصنيفات الخطة ومتطلباتها الحقيقية من البوابة
     expect(result.categories.length).toBe(9);

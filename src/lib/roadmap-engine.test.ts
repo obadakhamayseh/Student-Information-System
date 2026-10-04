@@ -18,19 +18,19 @@ describe('Graduation Roadmap Engine', () => {
       maxSummerHours: 9,
     });
 
-    expect(roadmap.totalRemainingHours).toBe(30); // 30 ساعة متبقية للتسجيل بعد احتساب الفصل الحالي المسجل (16 س.م)
+    expect(roadmap.totalRemainingHours).toBe(28); // 28 ساعة متبقية للتسجيل (18 تخصص إجباري + 6 جامعة إجباري + 4 تخصص اختياري)
     expect(roadmap.grossRemainingHours).toBe(46); // 46 ساعة إجمالياً قبل احتساب الفصل الحالي كمنجز
     expect(roadmap.completedHours).toBe(86);
-    expect(roadmap.currentRegisteredHours).toBe(16);
+    expect(roadmap.currentRegisteredHours).toBe(18); // 16 إجباري + 2 اختياري (معالجة الصور الرقمية 2211362)
     expect(roadmap.totalDegreeHours).toBe(132);
-    // التحقق الرياضي الحاسم: المنجز (86) + المسجل حالياً (16) + المتبقي للتسجيل (30) = مجموع الدرجة (132)
+    // التحقق الرياضي الحاسم: المنجز (86) + المسجل حالياً (18) + المتبقي للتسجيل (28) = مجموع الدرجة (132)
     expect(roadmap.completedHours + roadmap.currentRegisteredHours + roadmap.totalRemainingHours).toBe(roadmap.totalDegreeHours);
 
     // التحقق من حصص الفئات المتبقية للتسجيل بعد خصم الفصل الحالي
     expect(roadmap.stats.uniCompulsoryRemaining).toBe(6);
     expect(roadmap.stats.uniElectiveRemaining).toBe(0); // مكتملة 3/3 في الأقسام الثلاثة
     expect(roadmap.stats.majorCompulsoryRemaining).toBe(18); // 18 س.م فصول قادمة (بعد خصم 13 س.م قيد الدراسة حالياً)
-    expect(roadmap.stats.majorElectiveRemaining).toBe(6); // مادتين فقط وليس 11 مادة
+    expect(roadmap.stats.majorElectiveRemaining).toBe(4); // 4 ساعات فقط متبقية للتسجيل (بعد إنجاز 3 س.م وتسجيل 2 س.م من أصل 9 س.م)
     expect(roadmap.stats.collegeCompulsoryRemaining).toBe(0); // مكتمل بالفصل الحالي (المادة مسجلة حالياً بـ 3 س.م)
     expect(roadmap.stats.remedialRemaining).toBe(0); // مهارات حاسوب 99 معفى لاجتياز امتحان المستوى 2200096
 
@@ -50,9 +50,9 @@ describe('Graduation Roadmap Engine', () => {
     expect(roadmap.semesters.length).toBeGreaterThan(0);
     expect(roadmap.estimatedGraduationSemester).toBeTruthy();
 
-    // الفصل الأول يمثل الفصل الحالي قيد الدراسة بـ 16 ساعة معتمدة
+    // الفصل الأول يمثل الفصل الحالي قيد الدراسة بـ 18 ساعة معتمدة (16 إجباري + 2 اختياري كلية)
     expect(roadmap.semesters[0].isCurrentSemester).toBe(true);
-    expect(roadmap.semesters[0].totalHours).toBe(16);
+    expect(roadmap.semesters[0].totalHours).toBe(18);
 
     // الساعات المعتمدة للمساقات المجدولة تطابق 46 ساعة بالضبط (16 بالفصل الحالي + 30 بالفصول القادمة)
     const totalScheduledHours = roadmap.semesters.reduce(

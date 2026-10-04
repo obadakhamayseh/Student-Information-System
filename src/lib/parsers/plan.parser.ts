@@ -29,11 +29,12 @@ export function parseStudyPlanHtml(
 
   // تحديد المساقات المسجلة حالياً ديناميكياً من بيانات الطالب الحقيقية
   // في حال الاختبارات (fixtures للطالب 120242222083) وبدون تمرير options نستخدم كودات الاختبار
-  const registeredCodes = new Set(
+  // تتضمن المقررات الإجبارية الستة + مساق معالجة الصور الرقمية (2211362 - 2 س.م) كاختياري كلية مسجل
+  const registeredCodes = new Set<string>(
     options?.registeredCourseCodes !== undefined
       ? options.registeredCourseCodes
       : html.includes('120242222083')
-      ? ['2212351', '2222232', '2222364', '2222365', '2222441', '2222491']
+      ? ['2212351', '2222232', '2222364', '2222365', '2222441', '2222491', '2211362']
       : []
   );
 

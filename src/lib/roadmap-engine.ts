@@ -476,7 +476,6 @@ export function generateGraduationRoadmap(
         // الساعات المطلوبة من المقررات الاختيارية غير المسجلة حالياً
         if (unstudiedNeededHours > 0) {
           const unstudiedElectives = catCourses.filter((c) => c.status === 'متبقية');
-          let accumulatedHours = 0;
 
           // فرز المقررات الاختيارية لاختيار الأنسب أكاديمياً
           const sortedElectives = [...unstudiedElectives].sort((a, b) => {
@@ -485,15 +484,60 @@ export function generateGraduationRoadmap(
             return lvlA - lvlB;
           });
 
-          for (const electiveCourse of sortedElectives) {
-            if (accumulatedHours >= unstudiedNeededHours) break;
+          // خوارزمية ذكية لاختيار توليفة مساقات تطابق الساعات المطلوبة تماماً (Exact Match)
+          // دون أي زيادة في عدد الساعات عن الحد المطلوب (Zero Overshoot)
+          let selectedForCat: typeof catCourses = [];
+
+          const findExactCombo = (
+            items: typeof catCourses,
+            target: number
+          ): typeof catCourses | null => {
+            const current: typeof catCourses = [];
+            const search = (index: number, sum: number): boolean => {
+              if (sum === target) return true;
+              if (sum > target || index >= items.length) return false;
+
+              // تجربة أخذ المساق
+              current.push(items[index]);
+              const h = getOfficialCreditHours(
+                items[index].courseNumber,
+                items[index].courseName,
+                items[index].creditHours
+              );
+              if (search(index + 1, sum + h)) return true;
+              current.pop();
+
+              // تجربة عدم أخذ المساق
+              if (search(index + 1, sum)) return true;
+
+              return false;
+            };
+
+            return search(0, 0) ? [...current] : null;
+          };
+
+          const exactCombo = findExactCombo(sortedElectives, unstudiedNeededHours);
+          if (exactCombo && exactCombo.length > 0) {
+            selectedForCat = exactCombo;
+          } else {
+            let accumulatedHours = 0;
+            for (const el of sortedElectives) {
+              if (accumulatedHours >= unstudiedNeededHours) break;
+              selectedForCat.push(el);
+              accumulatedHours += getOfficialCreditHours(
+                el.courseNumber,
+                el.courseName,
+                el.creditHours
+              );
+            }
+          }
+
+          for (const electiveCourse of selectedForCat) {
             const hours = getOfficialCreditHours(
               electiveCourse.courseNumber,
               electiveCourse.courseName,
               electiveCourse.creditHours
             );
-            accumulatedHours += hours;
-
             const level = getCourseLevel(electiveCourse.courseNumber, electiveCourse.courseName);
             const difficulty = getCourseDifficulty(
               level,
@@ -566,7 +610,7 @@ export function generateGraduationRoadmap(
       }
     });
   } else {
-    // خطة احتياطية في حال لم تكن شجرة التصنيفات متوفرة
+    // خطة احتياطية ذكية في حال لم تكن شجرة التصنيفات متوفرة
     totalDegreeHours = planData.totalHours || 132;
     completedDegreeHours = planData.completedHours || 0;
 
@@ -578,13 +622,18 @@ export function generateGraduationRoadmap(
         !c.courseName.includes('امتحان مستوى')
     );
 
-    totalRemainingHours = remainingCourses.reduce(
-      (sum, c) =>
-        sum + getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours),
-      0
-    );
+    // فصل المساقات الإجبارية عن الاختيارية لمنع جدولة كل حوض المواد الاختيارية
+    const compulsoryRemaining = remainingCourses.filter((c) => {
+      const cat = c.category || '';
+      return !cat.includes('اختياري') && !cat.includes('إختياري');
+    });
 
-    remainingCourses.forEach((c) => {
+    const electiveRemaining = remainingCourses.filter((c) => {
+      const cat = c.category || '';
+      return cat.includes('اختياري') || cat.includes('إختياري');
+    });
+
+    compulsoryRemaining.forEach((c) => {
       const level = getCourseLevel(c.courseNumber, c.courseName);
       const hours = getOfficialCreditHours(c.courseNumber, c.courseName, c.creditHours);
       const prereq = getOfficialPrerequisite(c.courseNumber, c.prerequisite);
@@ -607,11 +656,37 @@ export function generateGraduationRoadmap(
           prerequisite: prereq,
           level,
           difficulty: getCourseDifficulty(level, c.category, c.courseName),
-          reason: 'متطلب خطة دراسية',
+          reason: 'متطلب تخصص إجباري',
           isCriticalPath: level <= 2,
         });
+        totalRemainingHours += hours;
+        if (c.category.includes('جامع')) {
+          stats.uniCompulsoryRemaining += hours;
+        } else {
+          stats.majorCompulsoryRemaining += hours;
+        }
       }
     });
+
+    // احتساب الساعات الاختيارية المتبقية (المطلوب 4 س.م فقط للطالب)
+    const neededElectiveHours = 4;
+    let accElec = 0;
+    for (const el of electiveRemaining) {
+      if (accElec >= neededElectiveHours) break;
+      const hours = getOfficialCreditHours(el.courseNumber, el.courseName, el.creditHours);
+      scheduledDegreePool.push({
+        ...el,
+        creditHours: hours,
+        prerequisite: getOfficialPrerequisite(el.courseNumber, el.prerequisite),
+        level: getCourseLevel(el.courseNumber, el.courseName),
+        difficulty: 'متوسط',
+        reason: 'مساق اختياري مقترح لاستيفاء ساعات الخطة',
+        isElectiveChoice: true,
+      });
+      accElec += hours;
+    }
+    stats.majorElectiveRemaining = accElec;
+    totalRemainingHours += accElec;
   }
 
   // مطابقة الساعات بدقة

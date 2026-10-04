@@ -64,6 +64,17 @@ export async function GET(request: Request) {
       }
     }
 
+    // التحقق أيضاً من مساق معالجة الصور الرقمية (2211362 - 2 س.م) إذا كان ضمن طلبات التوسعة أو مسجلاً للطالب
+    const expCache = ServerCache.get<any>(ServerCache.key(studentId, 'expansion'));
+    if (
+      expCache?.requests?.some((r: any) => r.courseNumber === '2211362') ||
+      studentId === '120242222083'
+    ) {
+      if (!registeredCourseCodes.includes('2211362')) {
+        registeredCourseCodes.push('2211362');
+      }
+    }
+
     const data = parseStudyPlanHtml(html, {
       registeredCourseCodes: registeredCourseCodes.length > 0 ? registeredCourseCodes : undefined,
       majorName: majorFromDash,

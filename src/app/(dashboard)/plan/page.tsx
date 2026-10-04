@@ -13,10 +13,13 @@ interface CategoryStats {
   name: string;
   requiredHours: number;
   completedHours: number;
+  enrolledHours: number;
+  remainingHours: number;
   passedCoursesCount: number;
   totalCoursesCount: number;
   percent: number;
   icon: string;
+  isElective: boolean;
 }
 
 export default function PlanPage() {
@@ -87,9 +90,14 @@ export default function PlanPage() {
 
     if (data?.categories && data.categories.length > 0) {
       return data.categories.map((cat, idx) => {
+        const enrolledInCat = cat.courses?.filter((c) => c.status === 'مسجلة') || [];
+        const enrolledHours = enrolledInCat.reduce((sum, c) => sum + (c.creditHours || 3), 0);
+        const remainingHours = Math.max(0, cat.requiredHours - cat.completedHours - enrolledHours);
+        const isElective = cat.name.includes('اختياري') || cat.name.includes('إختياري');
+
         const percent =
           cat.requiredHours > 0
-            ? Math.min(100, Math.round((cat.completedHours / cat.requiredHours) * 100))
+            ? Math.min(100, Math.round(((cat.completedHours + enrolledHours) / cat.requiredHours) * 100))
             : cat.completedHours > 0
             ? 100
             : 0;
@@ -99,42 +107,55 @@ export default function PlanPage() {
           name: cat.name,
           requiredHours: cat.requiredHours,
           completedHours: cat.completedHours,
+          enrolledHours,
+          remainingHours,
           passedCoursesCount: cat.passedCoursesCount || 0,
           totalCoursesCount: cat.totalCoursesCount || 0,
           percent,
           icon: getCategoryIcon(cat.name),
+          isElective,
         };
       });
     }
 
     // Fallback: Dynamically generate categories from real courses if categories list is empty
-    const catMap = new Map<string, { key: string; name: string; completedHours: number; requiredHours: number; passedCoursesCount: number; totalCoursesCount: number; icon: string }>();
+    const catMap = new Map<string, { key: string; name: string; completedHours: number; requiredHours: number; enrolledHours: number; remainingHours: number; passedCoursesCount: number; totalCoursesCount: number; icon: string; isElective: boolean }>();
 
     for (const c of coursesList) {
       const catName = c.category || 'متطلبات عامة';
+      const isElective = catName.includes('اختياري') || catName.includes('إختياري');
       const existing = catMap.get(catName) || {
         key: `cat_${encodeURIComponent(catName)}`,
         name: catName,
         completedHours: 0,
-        requiredHours: 0,
+        requiredHours: isElective ? (catName.includes('جامع') ? 3 : 9) : 0,
+        enrolledHours: 0,
+        remainingHours: 0,
         passedCoursesCount: 0,
         totalCoursesCount: 0,
         icon: getCategoryIcon(catName),
+        isElective,
       };
 
       existing.totalCoursesCount++;
-      existing.requiredHours += (c.creditHours || 3);
+      const h = c.creditHours || 3;
+      if (!isElective) {
+        existing.requiredHours += h;
+      }
       if (c.status === 'منجزة') {
         existing.passedCoursesCount++;
-        existing.completedHours += (c.creditHours || 3);
+        existing.completedHours += h;
+      } else if (c.status === 'مسجلة') {
+        existing.enrolledHours += h;
       }
+      existing.remainingHours = Math.max(0, existing.requiredHours - existing.completedHours - existing.enrolledHours);
       catMap.set(catName, existing);
     }
 
     return Array.from(catMap.values()).map((def) => {
       const percent =
         def.requiredHours > 0
-          ? Math.min(100, Math.round((def.completedHours / def.requiredHours) * 100))
+          ? Math.min(100, Math.round(((def.completedHours + def.enrolledHours) / def.requiredHours) * 100))
           : def.completedHours > 0
           ? 100
           : 0;
@@ -622,15 +643,32 @@ export default function PlanPage() {
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="inline-flex items-center gap-1 bg-surface-container-low px-2 py-0.5 rounded-full text-xs font-label-sm text-on-surface border border-surface-container-high/50 font-mono">
                     <span className="material-symbols-outlined text-[13px] text-secondary">check_circle</span>
-                    <span>{cat.passedCoursesCount}/{cat.totalCoursesCount} مادة</span>
+                    <span>
+                      {cat.isElective
+                        ? `${cat.passedCoursesCount} مجتازة (من حوض ${cat.totalCoursesCount} خيارات)`
+                        : `${cat.passedCoursesCount}/${cat.totalCoursesCount} مادة`}
+                    </span>
                   </span>
                   <span className="inline-flex items-center gap-1 bg-surface-container-low px-2 py-0.5 rounded-full text-xs font-label-sm text-primary font-bold border border-surface-container-high/50 font-mono">
                     <span className="material-symbols-outlined text-[13px] text-primary">hourglass_top</span>
-                    <span>{cat.completedHours}/{cat.requiredHours} ساعة</span>
+                    <span>{cat.completedHours}/{cat.requiredHours} س.م</span>
                   </span>
-                  {isCompleted && (
+                  {cat.enrolledHours > 0 && (
+                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-full text-[11px] font-bold border border-blue-200 font-mono">
+                      +{cat.enrolledHours} مسجلة حالياً
+                    </span>
+                  )}
+                  {isCompleted ? (
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary/15 text-secondary mr-auto">
                       منجز بالكامل
+                    </span>
+                  ) : cat.remainingHours > 0 ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 mr-auto">
+                      متبقي للتسجيل {cat.remainingHours} س.م
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 mr-auto">
+                      مكتمل بالفصل الحالي
                     </span>
                   )}
                 </div>
