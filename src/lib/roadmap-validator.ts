@@ -68,6 +68,25 @@ export interface CourseEligibility {
   isElective: boolean;
 }
 
+export interface CoursePrereqStatus {
+  hasPrereq: boolean;
+  prereqCode?: string;
+  prereqName?: string;
+  isCorequisite?: boolean;
+  isOfficiallyCompleted: boolean; // صدرت علامته النهائية وتم اعتماده كـ "منجز" في الخطة التدقيقية
+  isCurrentlyEnrolled: boolean; // مسجل حالياً بالفصل الحالي وبانتظار صدور علامته النهائية
+  isScheduledEarlier: boolean; // مجدول في فصل سابق بالخطة المستقبلية
+  isMet: boolean;
+  statusType:
+    | 'officially_completed'
+    | 'enrolled_pending_grade'
+    | 'scheduled_earlier'
+    | 'corequisite_same_term'
+    | 'missing';
+  statusBadgeText: string;
+  statusDetails: string;
+}
+
 export interface CustomPlanValidationResult {
   score: number; // 0 - 100
   rating: 'ممتاز ومثالي 🌟' | 'سليم أكاديمياً ✓' | 'تنبيهات عبء أو توازن ⚠️' | 'تعارضات أكاديمية حرجة ❌';
@@ -75,16 +94,7 @@ export interface CustomPlanValidationResult {
   isValid: boolean;
   checks: PlanAuditCheck[];
   suggestions: PlanSuggestion[];
-  coursePrereqMap: Record<
-    string,
-    {
-      isMet: boolean;
-      hasPrereq: boolean;
-      prereqCode?: string;
-      prereqName?: string;
-      isCorequisite?: boolean;
-    }
-  >;
+  coursePrereqMap: Record<string, CoursePrereqStatus>;
   semesterWorkloadMap: Record<
     string,
     {
@@ -120,27 +130,30 @@ export function validateCustomPlan(
 
   const allCourses = planData.courses || [];
 
-  // 1. تجميع المقررات المنجزة سابقاً والمقررات المسجلة حالياً
-  const baseCompletedCodes = new Set<string>();
-
+  // 1. تجميع المقررات المنجزة رسمياً التي صدرت علاماتها ووُضع عليها "منجز" في الخطة التدقيقية للموقع الأصلي
+  const officiallyCompletedCodes = new Set<string>();
   allCourses.forEach((c) => {
     if (c.status === 'منجزة') {
-      baseCompletedCodes.add(normalizeCode(c.courseNumber));
+      officiallyCompletedCodes.add(normalizeCode(c.courseNumber));
     }
   });
 
-  // امتحانات المستوى والمواد الاستدراكية المعفاة
-  baseCompletedCodes.add('1801096');
-  baseCompletedCodes.add('1802096');
-  baseCompletedCodes.add('2200096');
-  baseCompletedCodes.add('2200099');
+  // امتحانات المستوى والمواد الاستدراكية المعفاة رسمياً
+  officiallyCompletedCodes.add('1801096');
+  officiallyCompletedCodes.add('1802096');
+  officiallyCompletedCodes.add('2200096');
+  officiallyCompletedCodes.add('2200099');
 
-  // المقررات المسجلة بالفصل الحالي تصبح منجزة قبل بدء الفصول القادمة
+  // المقررات المسجلة حالياً بالفصل الحالي (قيد الدراسة - بانتظار صدور العلامة النهائية)
+  const currentlyEnrolledCodes = new Set<string>();
   allCourses
     .filter((c) => c.status === 'مسجلة')
     .forEach((c) => {
-      baseCompletedCodes.add(normalizeCode(c.courseNumber));
+      currentlyEnrolledCodes.add(normalizeCode(c.courseNumber));
     });
+
+  const baseCompletedCodes = new Set<string>(officiallyCompletedCodes);
+  currentlyEnrolledCodes.forEach((code) => baseCompletedCodes.add(code));
 
   // تصفية الفصول المستقبلية فقط (استبعاد الفصل الحالي إن وجد)
   const actualFutureSemesters = futureSemesters.filter((s) => !s.isCurrentSemester);
@@ -161,16 +174,7 @@ export function validateCustomPlan(
   // 2. فحص المتطلبات السابقة والمرافقة عبر المسار الزمني (Prerequisites & Corequisites Validation)
   const rollingCompletedCodes = new Set<string>(baseCompletedCodes);
   let prereqErrorsCount = 0;
-  const coursePrereqMap: Record<
-    string,
-    {
-      isMet: boolean;
-      hasPrereq: boolean;
-      prereqCode?: string;
-      prereqName?: string;
-      isCorequisite?: boolean;
-    }
-  > = {};
+  const coursePrereqMap: Record<string, CoursePrereqStatus> = {};
   const semesterWorkloadMap: Record<
     string,
     {
@@ -198,12 +202,44 @@ export function validateCustomPlan(
         const prereqName = prereqEntry?.courseName || prereqCode;
         const isMet = isMetEarlier || isMetSameTerm;
 
+        const isOfficiallyCompleted = officiallyCompletedCodes.has(normPrereq);
+        const isCurrentlyEnrolled = currentlyEnrolledCodes.has(normPrereq);
+        const isScheduledEarlier = isMetEarlier && !isOfficiallyCompleted && !isCurrentlyEnrolled;
+
+        let statusType: CoursePrereqStatus['statusType'] = 'missing';
+        let statusBadgeText = `❌ المتطلب غير مكتمل (${prereqName})`;
+        let statusDetails = `مساق (${course.courseName}) يتطلب اجتياز (${prereqName}) قبله.`;
+
+        if (isOfficiallyCompleted) {
+          statusType = 'officially_completed';
+          statusBadgeText = '✅ مستوفى رسمياً (منجز بالخطة التدقيقية)';
+          statusDetails = 'صدرت علامته النهائية في الموقع الأصلي وتم وضعه كـ منجز بالخطة التدقيقية بنجاح.';
+        } else if (isCurrentlyEnrolled) {
+          statusType = 'enrolled_pending_grade';
+          statusBadgeText = '⏳ قيد الدراسة حالياً (يُعتمد بعد صدور علامته كـ منجز)';
+          statusDetails = 'المتطلب مسجل حالياً؛ ويُعتبر مستوفياً رسمياً فور صدور علامته النهائية ووضعه كـ منجز في الموقع الأصلي.';
+        } else if (isScheduledEarlier) {
+          statusType = 'scheduled_earlier';
+          statusBadgeText = '🗓️ مجدول في فصل سابق';
+          statusDetails = 'مجدول لدراسته في فصل سابق، ويُعتمد رسمياً بعد اجتيازه وصدور علامته في ذلك الفصل.';
+        } else if (isMetSameTerm) {
+          statusType = 'corequisite_same_term';
+          statusBadgeText = '🔄 متزامن (متطلب مرافق مسجل بنفس الفصل)';
+          statusDetails = 'المساق مرافق ويسمح بتسجيله تزامناً في نفس الفصل.';
+        }
+
         coursePrereqMap[`${course.courseNumber}_${sem.id}`] = {
           isMet,
           hasPrereq: true,
           prereqCode,
           prereqName,
           isCorequisite: isCoreq,
+          isOfficiallyCompleted,
+          isCurrentlyEnrolled,
+          isScheduledEarlier,
+          statusType,
+          statusBadgeText,
+          statusDetails,
         };
 
         if (!isMet) {
@@ -217,7 +253,7 @@ export function validateCustomPlan(
             message: `مساق (${course.courseName}) يتطلب اجتياز (${prereqName}) قبله.`,
             details: isCoreq
               ? `المساق يقبل المرافقة، لكن المتطلب غير مسجل بهذا الفصل أو بالفصول السابقة.`
-              : `المتطلب السابق غير مستوفى في الفصول السابقة لهذا الفصل.`,
+              : `المتطلب السابق غير مستوفى في الفصول السابقة لهذا الفصل ولم تصدر علامة نهائية له.`,
             affectedCourses: [course.courseNumber, prereqCode],
             affectedSemesterIndex: sIdx,
           });
@@ -248,7 +284,7 @@ export function validateCustomPlan(
               type: 'prereq_conflict',
               severity: 'critical',
               title: `متطلب سابق غير مجدول: ${prereqName}`,
-              description: `تحتاج لتسجيل (${prereqName}) أولاً لتتمكن من دراسة (${course.courseName}).`,
+              description: `تحتاج لتسجيل (${prereqName}) أولاً واجتيازه لتتمكن من دراسة (${course.courseName}).`,
               actionText: `إضافة المتطلب السابق`,
               suggestedAction: {
                 type: 'add_course',
@@ -263,6 +299,12 @@ export function validateCustomPlan(
         coursePrereqMap[`${course.courseNumber}_${sem.id}`] = {
           isMet: true,
           hasPrereq: false,
+          isOfficiallyCompleted: true,
+          isCurrentlyEnrolled: false,
+          isScheduledEarlier: false,
+          statusType: 'officially_completed',
+          statusBadgeText: 'مساق تأسيسي (بدون متطلب)',
+          statusDetails: 'المساق لا يتطلب أي متطلبات سابقة.',
         };
       }
     });
@@ -276,10 +318,37 @@ export function validateCustomPlan(
   if (prereqErrorsCount === 0) {
     checks.push({
       id: 'prereqs_ok',
-      title: 'سلامة المتطلبات السابقة والمرافقة',
+      title: 'سلامة المتطلبات السابقة والأسبقيات',
       category: 'prerequisites',
       status: 'pass',
-      message: 'جميع المتطلبات السابقة مستوفاة بتسلسل أكاديمي صحيح 100%.',
+      message: 'جميع المتطلبات السابقة مستوفاة بتسلسل أكاديمي صحيح ومنضبط.',
+    });
+  }
+
+  // ضابط اعتماد المتطلبات الأكاديمية الرسمي
+  checks.push({
+    id: 'prereq_official_audit_rule',
+    title: 'ضابط اعتماد المتطلبات (الخطة التدقيقية الرسمية)',
+    category: 'prerequisites',
+    status: 'pass',
+    message:
+      'المتطلب السابق يُعتمد مستوفى رسمياً بعد صدور علامته النهائية واعتماده بحالة "منجز" بالخطة التدقيقية من قبل الموقع الأصلي.',
+  });
+
+  const pendingCourses = actualFutureSemesters
+    .flatMap((s) => s.courses)
+    .filter((c) => {
+      const pCode = getOfficialPrerequisiteCode(normalizeCode(c.courseNumber));
+      return pCode && currentlyEnrolledCodes.has(normalizeCode(pCode));
+    });
+
+  if (pendingCourses.length > 0) {
+    checks.push({
+      id: 'prereqs_pending_grades',
+      title: 'متطلبات قيد الدراسة بانتظار ترصيد العلامات النهائية',
+      category: 'prerequisites',
+      status: 'pass',
+      message: `يوجد ${pendingCourses.length} مقررات قادمة تعتمد على مواد قيد الدراسة حالياً؛ وتُعتمد رسمياً فور صدور علاماتها النهائية وتحديث حالتها إلى "منجز" في موقع الجامعة.`,
     });
   }
 

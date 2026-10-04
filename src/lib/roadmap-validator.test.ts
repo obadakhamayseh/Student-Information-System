@@ -128,4 +128,35 @@ describe('Academic Plan Customizer & AI Advisor Engine', () => {
       });
     });
   });
+
+  it('should accurately distinguish officially passed courses from enrolled courses pending final grades', () => {
+    const roadmap = generateGraduationRoadmap(planData);
+    const result = validateCustomPlan(planData, roadmap.semesters);
+
+    // Verify official audit rule check exists
+    expect(result.checks.some((c) => c.id === 'prereq_official_audit_rule')).toBe(true);
+
+    // Neural Networks (2222451) depends on Machine Learning (2222364) which is currently enrolled (مسجلة)
+    const futureSemesters = roadmap.semesters.filter((s) => !s.isCurrentSemester);
+    const sem1 = futureSemesters[0];
+    const sem2 = futureSemesters[1];
+
+    // Find course 2222451 in scheduled semesters
+    const nnCourse = sem1.courses.find((c) => c.courseNumber === '2222451') ||
+      sem2.courses.find((c) => c.courseNumber === '2222451');
+
+    if (nnCourse) {
+      const targetSem = sem1.courses.some((c) => c.courseNumber === '2222451') ? sem1 : sem2;
+      const status = result.coursePrereqMap[`${nnCourse.courseNumber}_${targetSem.id}`];
+      expect(status).toBeDefined();
+      expect(status.hasPrereq).toBe(true);
+      expect(status.isCurrentlyEnrolled).toBe(true);
+      expect(status.statusType).toBe('enrolled_pending_grade');
+      expect(status.statusBadgeText).toContain('قيد الدراسة');
+    }
+
+    const completedCourse = planData.courses.find((c) => c.status === 'منجزة');
+    expect(completedCourse).toBeDefined();
+    expect(completedCourse?.status).toBe('منجزة');
+  });
 });

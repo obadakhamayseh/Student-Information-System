@@ -688,6 +688,14 @@ export default function PlanPage() {
         </div>
       </div>
 
+      {/* تنبيه ضابط استيفاء المتطلبات الأكاديمية الرسمي */}
+      <div className="mb-space-md p-3.5 bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/80 rounded-xl text-xs text-blue-950 dark:text-blue-200 flex items-center gap-3">
+        <span className="material-symbols-outlined text-lg text-blue-700 shrink-0">verified</span>
+        <div className="leading-relaxed">
+          <strong>ضابط اعتماد المتطلبات الأكاديمية (الخطة التدقيقية الرسمية):</strong> يُعتمد المتطلب السابق كمستوفى رسمياً حصراً <strong>بعد صدور علامته النهائية واعتماده بحالة &quot;منجز&quot; في الخطة التدقيقية من قبل الموقع الأصلي للجامعة</strong>. المقررات المسجلة حالياً تظل مصنفة كـ <em>(قيد الدراسة - بانتظار صدور العلامة)</em> وتتحول إلى منجزة رسمياً فور رصد علاماتها النهائية بالموقع الأصلي.
+        </div>
+      </div>
+
       {/* Legend & Interactive Search Toolbar */}
       <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm mb-space-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md border border-surface-container-high/40">
         {/* Search and Status Quick Filter */}

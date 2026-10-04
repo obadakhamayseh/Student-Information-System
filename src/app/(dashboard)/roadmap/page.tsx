@@ -604,24 +604,31 @@ export default function GraduationRoadmapPage() {
   const modalTargetSem =
     addCourseModalSemIdx !== null ? activeSemesters[addCourseModalSemIdx] : null;
 
-  const priorCompletedCodesForModal = new Set<string>();
+  const officiallyCompletedCodesForModal = new Set<string>();
+  const currentlyEnrolledCodesForModal = new Set<string>();
+  const earlierScheduledCodesForModal = new Set<string>();
+
   if (planData?.courses) {
     planData.courses.forEach((c) => {
-      if (c.status === 'منجزة' || c.status === 'مسجلة') {
-        priorCompletedCodesForModal.add(normalizeCourseCode(c.courseNumber));
+      if (c.status === 'منجزة') {
+        officiallyCompletedCodesForModal.add(normalizeCourseCode(c.courseNumber));
+      } else if (c.status === 'مسجلة') {
+        currentlyEnrolledCodesForModal.add(normalizeCourseCode(c.courseNumber));
       }
     });
   }
-  priorCompletedCodesForModal.add('1801096');
-  priorCompletedCodesForModal.add('1802096');
-  priorCompletedCodesForModal.add('2200096');
-  priorCompletedCodesForModal.add('2200099');
+  officiallyCompletedCodesForModal.add('1801096');
+  officiallyCompletedCodesForModal.add('1802096');
+  officiallyCompletedCodesForModal.add('2200096');
+  officiallyCompletedCodesForModal.add('2200099');
 
   if (addCourseModalSemIdx !== null) {
     for (let i = 0; i < addCourseModalSemIdx; i++) {
-      activeSemesters[i].courses.forEach((c) => {
-        priorCompletedCodesForModal.add(normalizeCourseCode(c.courseNumber));
-      });
+      if (!activeSemesters[i].isCurrentSemester) {
+        activeSemesters[i].courses.forEach((c) => {
+          earlierScheduledCodesForModal.add(normalizeCourseCode(c.courseNumber));
+        });
+      }
     }
   }
 
@@ -1824,16 +1831,37 @@ export default function GraduationRoadmapPage() {
                                 )}
                               </div>
 
-                              {/* Real-time Prerequisite Status Pill */}
+                              {/* Real-time Prerequisite Status Pill with Official Grade / Audit Criteria */}
                               {!sem.isCurrentSemester && prereqStatus && (
                                 <div className="mt-2">
                                   {prereqStatus.hasPrereq ? (
-                                    prereqStatus.isMet ? (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-fit">
+                                    prereqStatus.statusType === 'officially_completed' ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-fit shadow-2xs">
                                         <span className="material-symbols-outlined text-[13px]">
-                                          check_circle
+                                          verified
                                         </span>
-                                        <span>المتطلب مستوفى ✓</span>
+                                        <span>المتطلب مستوفى رسمياً ✓ (منجز بالخطة)</span>
+                                      </span>
+                                    ) : prereqStatus.statusType === 'enrolled_pending_grade' ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit shadow-2xs">
+                                        <span className="material-symbols-outlined text-[13px]">
+                                          pending
+                                        </span>
+                                        <span>قيد الدراسة حالياً ⏳ (يُعتمد بعد صدور العلامة كـ منجز)</span>
+                                      </span>
+                                    ) : prereqStatus.statusType === 'scheduled_earlier' ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1 w-fit">
+                                        <span className="material-symbols-outlined text-[13px]">
+                                          calendar_month
+                                        </span>
+                                        <span>مجدول في فصل سابق 🗓️</span>
+                                      </span>
+                                    ) : prereqStatus.statusType === 'corequisite_same_term' ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-200 flex items-center gap-1 w-fit">
+                                        <span className="material-symbols-outlined text-[13px]">
+                                          sync_alt
+                                        </span>
+                                        <span>متطلب مرافق (مسجل بنفس الفصل)</span>
                                       </span>
                                     ) : (
                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-900 border border-rose-300 flex items-center gap-1 w-fit">
@@ -1847,7 +1875,7 @@ export default function GraduationRoadmapPage() {
                                     )
                                   ) : (
                                     <span className="text-[10px] font-medium text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container">
-                                      بدون متطلب سابق
+                                      مساق تأسيسي (بدون متطلب)
                                     </span>
                                   )}
                                 </div>
@@ -2066,19 +2094,35 @@ export default function GraduationRoadmapPage() {
 
                   if (prereqCode) {
                     const normPrereq = normalizeCourseCode(prereqCode);
-                    const isMetInPrevious = priorCompletedCodesForModal.has(normPrereq);
+                    const isOfficiallyCompleted = officiallyCompletedCodesForModal.has(normPrereq);
+                    const isCurrentlyEnrolled = currentlyEnrolledCodesForModal.has(normPrereq);
+                    const isScheduledEarlier = earlierScheduledCodesForModal.has(normPrereq);
                     const isMetInSameTerm =
                       isCoreq &&
                       modalTargetSem.courses.some(
                         (c) => normalizeCourseCode(c.courseNumber) === normPrereq
                       );
-                    isPrereqMet = isMetInPrevious || isMetInSameTerm;
+                    isPrereqMet =
+                      isOfficiallyCompleted ||
+                      isCurrentlyEnrolled ||
+                      isScheduledEarlier ||
+                      isMetInSameTerm;
 
                     if (!isPrereqMet) {
                       const prereqEntry = getOfficialCourse(normPrereq);
                       missingPrereqTitle = prereqEntry?.courseName || prereqCode;
                     }
                   }
+
+                  const normCourseCode = normalizeCourseCode(course.courseNumber);
+                  const pCode = getOfficialPrerequisiteCode(normCourseCode);
+                  const normPCode = pCode ? normalizeCourseCode(pCode) : '';
+                  const isPrereqOfficiallyDone = normPCode
+                    ? officiallyCompletedCodesForModal.has(normPCode)
+                    : true;
+                  const isPrereqEnrolledNow = normPCode
+                    ? currentlyEnrolledCodesForModal.has(normPCode)
+                    : false;
 
                   return (
                     <div
@@ -2102,13 +2146,34 @@ export default function GraduationRoadmapPage() {
                           {course.courseName}
                         </h5>
 
-                        <div className="flex items-center gap-2 text-[11px]">
-                          {isPrereqMet ? (
+                        <div className="flex items-center gap-2 text-[11px] flex-wrap">
+                          {!pCode ? (
                             <span className="text-emerald-700 font-bold flex items-center gap-1">
                               <span className="material-symbols-outlined text-[13px]">
                                 check_circle
                               </span>
-                              <span>المتطلب مستوفى لهذا الفصل ✓</span>
+                              <span>مساق تأسيسي (بدون متطلب سابق)</span>
+                            </span>
+                          ) : isPrereqOfficiallyDone ? (
+                            <span className="text-emerald-700 font-bold flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">
+                                verified
+                              </span>
+                              <span>المتطلب مستوفى رسمياً ✓ (صدرت علامته واعتُمد كمنجز)</span>
+                            </span>
+                          ) : isPrereqEnrolledNow ? (
+                            <span className="text-amber-800 font-bold flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">
+                                pending
+                              </span>
+                              <span>قيد الدراسة حالياً ⏳ (يُعتمد بعد صدور علامته كـ منجز)</span>
+                            </span>
+                          ) : isPrereqMet ? (
+                            <span className="text-blue-700 font-bold flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">
+                                calendar_month
+                              </span>
+                              <span>المتطلب مجدول في فصل سابق بالخطة</span>
                             </span>
                           ) : (
                             <span className="text-rose-700 font-bold flex items-center gap-1">
@@ -2147,6 +2212,9 @@ export default function GraduationRoadmapPage() {
               تعليمات المرشد الأكاديمي وضوابط جامعة مؤتة الرسمية:
             </h4>
             <ul className="text-xs sm:text-sm text-on-primary-container space-y-1.5 list-disc list-inside leading-relaxed">
+              <li>
+                <strong>ضابط اعتماد المتطلبات الأكاديمية (الخطة التدقيقية الرسمية):</strong> يُعتمد المتطلب السابق كمستوفى رسمياً حصراً <strong>بعد صدور علامته النهائية واعتماده بحالة 'منجز' في الخطة التدقيقية من قبل الموقع الأصلي للجامعة</strong>. المقررات المسجلة حالياً بالفصل الحالي تظل مصنفة كـ <em>(قيد الدراسة - بانتظار صدور العلامة)</em> وتتحول إلى منجزة رسمياً فور رصد علاماتها النهائية بالموقع الأصلي.
+              </li>
               <li>
                 <strong>تخصيص الخطة ومؤشر السلامة:</strong> يمكنك إضافة، إزالة، ونقل أي مادة بين الفصول بحرية تامة، وسيقوم النظام فوراً بحساب نسبة الدقة وسلامة الاختيار واقتراح الحلول الفورية بنقرة واحدة.
               </li>
